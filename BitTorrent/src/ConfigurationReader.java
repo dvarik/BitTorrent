@@ -3,6 +3,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.HashMap;
+import java.util.logging.Logger;
 
 public class ConfigurationReader {
 
@@ -14,11 +15,13 @@ public class ConfigurationReader {
 
 	private static ConfigurationReader instance = null;
 
+	private final Logger log = Logger.getLogger(this.getClass().getName());
+
 	public static synchronized ConfigurationReader getInstance() {
-		
+
 		if (instance == null)
 			instance = new ConfigurationReader();
-		
+
 		return instance;
 	}
 
@@ -29,7 +32,7 @@ public class ConfigurationReader {
 					new InputStreamReader(getClass().getResourceAsStream(commonFileName)));
 
 			String line = null;
-		
+
 			while ((line = br.readLine()) != null) {
 				String[] split = line.split(" ");
 				commonProps.put(split[0], split[1]);
@@ -38,25 +41,25 @@ public class ConfigurationReader {
 			br.close();
 
 			br = new BufferedReader(new InputStreamReader(getClass().getResourceAsStream(peerInfoFileName)));
-			
+
 			line = null;
 			while ((line = br.readLine()) != null) {
-			
+
 				String[] split = line.split(" ");
 				int peerId = Integer.parseInt(split[0]);
 				PeerConfig peer = new PeerConfig(peerId, split[1], Integer.parseInt(split[2]),
 						Integer.parseInt(split[3]));
 				peerProps.put(peerId, peer);
 			}
-			
+
 			br.close();
 
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
-			// add logging
+			log.severe(e.getMessage());
 		} catch (IOException e) {
 			e.printStackTrace();
-			// add logging
+			log.severe(e.getMessage());
 		}
 	}
 

@@ -1,6 +1,6 @@
-import java.util.logging.Logger;
-import java.util.DateFormat;
-import java.util.SimpleDateFormat;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.logging.Formatter;
 import java.util.logging.LogRecord;
 
@@ -22,4 +22,5 @@ public class LogFormatter extends Formatter {
 		Date tstamp = new Date(milliSeconds);
 		return formatter.format(tstamp);
 	}
+	
 }

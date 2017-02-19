@@ -1,15 +1,16 @@
-import java.util.logging.Logger;
+import java.io.File;
 import java.io.IOException;
+import java.util.logging.ConsoleHandler;
 import java.util.logging.FileHandler;
-import java.util.logging.Formatter;
+import java.util.logging.Handler;
 import java.util.logging.Level;
-import java.util.logging.LogFormatter;
+import java.util.logging.Logger;
 
 public class LoggerUtility {
 	
 	static private FileHandler logFileHandler;
     static private LogFormatter formatTxt;
-    static private logger;
+    static private Logger logger;
    
     static public void setup(String peerId) throws IOException {
 
@@ -19,11 +20,11 @@ public class LoggerUtility {
             //Remove the console handler
             logger.setUseParentHandlers(false);
             
-            //Suppress the logging output to the console
-            Logger rootLogger = Logger.*getLogger*("");
-            Handler[] handlers = rootLogger.getHandlers();
-            if (handlers[0] instanceof ConsoleHandler) {
-                    rootLogger.removeHandler(handlers[0]);
+            //Suppress the logging output to the console - to do
+
+            Handler[] handlers = logger.getHandlers();
+            if (handlers != null && handlers.length > 0 && handlers[0] instanceof ConsoleHandler) {
+                    logger.removeHandler(handlers[0]);
             }
 
             //Set the logger level to Config
