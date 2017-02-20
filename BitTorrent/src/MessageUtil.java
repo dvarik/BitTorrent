@@ -37,4 +37,15 @@ public class MessageUtil {
 		return result;
 	}
 
+	public static byte[] getMessage(MessageType mType) { 
+		byte[] msg = Util.intToByteArray(0);
+		return Util.concatenateByte(msg, mType.value);
+	}
+	
+	public static byte[] getMessage(byte[] payload, MessageType mType)
+	{
+		byte[] msg = Util.intToByteArray(payload);
+		byte[] temp = Util.concatenateByte(msg,mType.value)
+		return Util.concatenateByteArrays(temp, payload);
+	}
 }

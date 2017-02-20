@@ -34,6 +34,8 @@ public class Peer {
 	private Map<Integer, Peer> chokedBy = new HashMap<Integer, Peer>();
 
 	private Map<Integer, Peer> unchokedBy = new HashMap<Integer, Peer>();
+	
+	private final static byte[] myBitField; 
 
 	public Peer(int peerId, Socket s) {
 		myPeerId = peerId;
@@ -97,6 +99,11 @@ public class Peer {
 		this.unchokedBy = unchokedBy;
 	}
 
+	public byte[] getBitField()
+	{
+		return myBitField;
+	}
+	
 	public void sendHandshakeMsg() {
 
 		byte[] messageHeader = MessageUtil.getMessageHeader((byte) myPeerId);
@@ -134,6 +141,95 @@ public class Peer {
 
 	}
 
+	// Sending bitfield messages
+	public void sendBitFieldMessage() {
+		 try {
+	            byte[] bitField = getMyBitField();
+	            byte[] actualMessage = MessagesUtil.getMessage(bitField,
+	                    MessageType.BITFIELD);
+	            out.write(actualMessage);
+	            out.flush();
+	        } catch (IOException e) {
+	            System.out.println("Message sending with bitfield failed.");
+	            // TODO Auto-generated catch block
+	            e.printStackTrace();
+	        }
+	}
+	
+	// Sends 'interested' messages
+    public void sendInterestedMsg() {
+        System.out.println("Sending interested message ");
+        byte[] actualMessage = MessagesUtil
+                .getMessage(MessageType.INTERESTED);
+        try {
+            out.write(actualMessage);
+            out.flush();
+
+        } catch (IOException e) {
+            System.out.println("Exception during sending interested messages " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    // Sends 'not interested' messages
+    public void sendNotInterestedMsg() {
+        byte[] actualMessage = MessagesUtil
+                .getMessage(MessageType.NOT_INTERESTED);
+        try {
+            out.write(actualMessage);
+            out.flush();
+
+        } catch (IOException e) {
+            System.out.println("Exception during sending uninterested messages" + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+    
+    // Sends 'have' messages
+    public void sendHaveMsg(int pieceIndex) {
+        byte[] actualMessage = MessagesUtil.getMessage(
+                Util.intToByteArray(pieceIndex),
+                MessageTypes.HAVE);
+        try {
+            out.write(actualMessage);
+            out.flush();
+
+        } catch (IOException e) {
+            System.out.println("Exception during sending have messages" + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    // Sends 'choke' messages
+    public void sendChokeMsg() {
+        byte[] actualMessage = MessagesUtil
+                .getMessage(MessageType.CHOKE);
+        try {
+            out.write(actualMessage);
+            out.flush();
+
+        } catch (IOException e) {
+            System.out.println("Exception during sending choke messages" " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    // Sends 'unchoke' messages
+    public synchronized void sendUnChokeMsg() {
+        byte[] actualMessage = MessagesUtil
+                .getMessage(MessageType.UNCHOKE);
+        try {
+            out.write(actualMessage);
+            out.flush();
+
+        } catch (IOException e) {
+            System.out.println("Exception during sending unchoke messages" " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+    
+    
+    // Close all the connections
 	public void close() {
 		try {
 			in.close();
