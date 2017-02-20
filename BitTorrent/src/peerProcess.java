@@ -1,75 +1,59 @@
 import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.net.ConnectException;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 
 public class peerProcess {
 
-	Socket requestSocket; // socket connect to the server
-	ObjectOutputStream out; // stream write to the socket
-	ObjectInputStream in; // stream read from the socket
-	String message; // message send to the server
-	String serverMessage; // capitalized message read from the server
-	
-	public static LoggerUtility logger = null;
+	final int myPeerId;
+
+	final LoggerUtility logger;
+
+	// list of connected peers
+	List<Peer> connectedPeers = new ArrayList<Peer>(); 
+
+
+	public peerProcess(int selfPeerId) {
+		
+		this.myPeerId = selfPeerId;
+		
+		this.logger = new LoggerUtility(selfPeerId);
+	}
 
 	public void establishClientConnection(int selfPeerId) {
-		
+
 		HashMap<Integer, PeerConfig> peerMap = ConfigurationReader.getInstance().getPeerInfo();
-		
+
 		for (Integer currPeerId : peerMap.keySet()) {
-		
+
 			if (currPeerId < selfPeerId) {
-			
+
 				PeerConfig currPeerInfo = peerMap.get(currPeerId);
+
 				try {
 					// create a socket to connect to the peer
-					requestSocket = new Socket(currPeerInfo.hostName, currPeerInfo.port);
-					
-					//logger.getLogger().config(System.currentTimeMillis() + "[Time]: Peer " + selfPeerId + "
-						// makes a connection to Peer " + currPeerId);
+					Peer p = new Peer(currPeerId, new Socket(currPeerInfo.hostName, currPeerInfo.port));
+
+					logger.log("Peer " + selfPeerId + " makes a connection to Peer " + currPeerId);
 
 					System.out
 							.println("Connected to " + currPeerInfo.hostName + " on port number " + currPeerInfo.port);
 
-					// initialize inputStream and outputStream
-					out = new ObjectOutputStream(requestSocket.getOutputStream());
-					out.flush();
-					in = new ObjectInputStream(requestSocket.getInputStream());
+					p.sendHandshakeMsg();
 
-					while (true) {
-						// test input message
-						message = "This is a test.";
-						// Send the message to the server
-						sendMessage(message);
-						// Receive the upperCase sentence from the server
-						serverMessage = (String) in.readObject();
-						// show the message to the user
-						System.out.println("Receive message: " + serverMessage);
-					}
-				
+					int m = p.receiveHandshakeMsg();
+
+					connectedPeers.add(p);
+
 				} catch (ConnectException e) {
 					System.err.println("Connection refused. You need to initiate a server first.");
-				} catch (ClassNotFoundException e) {
-					System.err.println("Class not found");
 				} catch (UnknownHostException unknownHost) {
 					System.err.println("You are trying to connect to an unknown host!");
 				} catch (IOException ioException) {
 					ioException.printStackTrace();
-				} finally {
-				
-					// Close connections
-					try {
-						in.close();
-						out.close();
-						requestSocket.close();
-					} catch (IOException ioException) {
-
-						ioException.printStackTrace();
-					}
 				}
 
 			}
@@ -77,7 +61,7 @@ public class peerProcess {
 		}
 	}
 
-	public void acceptServerConnection(int selfPeerId) {
+	public void acceptConnection(int peerId, int port) {
 
 	}
 
@@ -89,16 +73,31 @@ public class peerProcess {
 
 	}
 
-	public void sendMessage(String message) {
-
-	}
 
 	public static void main(String[] args) {
 
 		int peerId = Integer.parseInt(args[0]);
+		
 		PeerConfig peerInfo = ConfigurationReader.getInstance().getPeerInfo().get(peerId);
-		peerProcess peer = new peerProcess();
+		
+		peerProcess peer = new peerProcess(peerId);
+
+		HashMap<String, String> comProp = ConfigurationReader.getInstance().getCommonProps();
+
 		peer.establishClientConnection(peerInfo.peerId);
 
+		peer.acceptConnection(peerId, peerInfo.getPort());
+
+		int m = Integer.parseInt(comProp.get("OptimisticUnchokingInterval"));
+
+		int k = Integer.parseInt(comProp.get("NumberOfPreferredNeighbors"));
+
+		int p = Integer.parseInt(comProp.get("UnchokingInterval"));
+
+		peer.findPreferredNeighbours(k, p);
+
+		peer.findOptimisticallyUnchokedNeighbour(m);
+
 	}
+
 }
