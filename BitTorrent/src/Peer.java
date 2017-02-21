@@ -10,6 +10,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
+import java.util.*;
 
 public class Peer {
 
@@ -221,6 +222,29 @@ public class Peer {
             e.printStackTrace();
         }
     }
+	
+	
+	// Sends 'request' message
+    public void sendRequestMsg(int pieceIndex) {
+        if (pieceIndex >= 0) {
+        	byte[] pieceIndexArr = MessageUtil.integerToByteArray(pieceIndex);
+
+            byte[] actualMessage = MessageUtil.getMessage(
+                    pieceIndexArr, MessageUtil.MessageType.REQUEST);
+            
+            try {
+                out.write(actualMessage);
+                out.flush();
+                
+                //---
+                
+            } catch (IOException e) {
+                System.out.println("Exception during reading " + e.getMessage());
+                e.printStackTrace();
+            }
+        }
+    }
+	
 
 	// Close all the connections
 	public void close() {

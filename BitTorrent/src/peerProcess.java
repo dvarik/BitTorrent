@@ -1,10 +1,12 @@
 import java.io.IOException;
 import java.net.ConnectException;
+import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+
 
 public class peerProcess {
 
@@ -17,9 +19,9 @@ public class peerProcess {
 
 
 	public peerProcess(int selfPeerId) {
-		
+
 		this.myPeerId = selfPeerId;
-		
+
 		this.logger = new LoggerUtility(selfPeerId);
 	}
 
@@ -40,7 +42,7 @@ public class peerProcess {
 					logger.log("Peer " + selfPeerId + " makes a connection to Peer " + currPeerId);
 
 					System.out
-							.println("Connected to " + currPeerInfo.hostName + " on port number " + currPeerInfo.port);
+					.println("Connected to " + currPeerInfo.hostName + " on port number " + currPeerInfo.port);
 
 					p.sendHandshakeMsg();
 
@@ -61,7 +63,26 @@ public class peerProcess {
 		}
 	}
 
-	public void acceptConnection(int peerId, int port) {
+	public void acceptConnection(int selfPeerId, int portNum) {
+		HashMap<Integer, PeerConfig> peerMap = ConfigurationReader.getInstance().getPeerInfo();
+
+		for (Integer currPeerId : peerMap.keySet()) {
+			if (currPeerId > selfPeerId) {
+				PeerConfig currPeerInfo = peerMap.get(currPeerId);
+				try {
+					ServerSocket socket = new ServerSocket(currPeerInfo.getPort());
+					Socket acceptedSocket = socket.accept();
+					
+					// code to be added here
+					
+					socket.close();
+
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}
+		}
 
 	}
 
@@ -77,9 +98,9 @@ public class peerProcess {
 	public static void main(String[] args) {
 
 		int peerId = Integer.parseInt(args[0]);
-		
+
 		PeerConfig peerInfo = ConfigurationReader.getInstance().getPeerInfo().get(peerId);
-		
+
 		peerProcess peer = new peerProcess(peerId);
 
 		HashMap<String, String> comProp = ConfigurationReader.getInstance().getCommonProps();
