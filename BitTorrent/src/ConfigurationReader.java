@@ -5,6 +5,10 @@ import java.io.InputStreamReader;
 import java.util.HashMap;
 import java.util.logging.Logger;
 
+/**
+ * @author dvarik
+ *
+ */
 public class ConfigurationReader {
 
 	private HashMap<Integer, PeerConfig> peerProps = new HashMap<Integer, PeerConfig>();

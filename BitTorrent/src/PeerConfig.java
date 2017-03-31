@@ -1,4 +1,7 @@
-
+/**
+ * @author dvarik
+ *
+ */
 public class PeerConfig {
 
 	int peerId;
