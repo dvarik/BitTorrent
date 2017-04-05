@@ -8,6 +8,10 @@ public class PeerConfig {
 	String hostName;
 	int port;
 	int hasFile;
+	
+	boolean isChoked = true;
+	
+	long downloadRate;
 
 	public PeerConfig(int peerId, String hostName, int port, int hasFile) {
 		super();
