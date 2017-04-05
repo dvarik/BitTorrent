@@ -12,13 +12,6 @@ import java.util.Arrays;
  */
 public class P2PConnectionThread extends Thread {
 
-	// do handshake stuff to establish connection
-
-	// send different msgs to peer depending on torrent manager's pref neighbs
-	// and opt unchoked maps
-
-	// send recieve data from this peer accordingly
-
 	private final int peerId;
 
 	private final boolean isClientConnection;
@@ -61,12 +54,12 @@ public class P2PConnectionThread extends Thread {
 			sendHandshakeMsg();
 		}
 		this.logger = new LoggerUtility(peerId);
-
+		
 	}
 
 	public void sendHandshakeMsg() {
 
-		byte[] messageHeader = MessageUtil.getMessageHeader((byte) peerId);
+		byte[] messageHeader = MessageUtil.getMessageHeader(peerId);
 
 		try {
 			out.write(messageHeader);
@@ -85,9 +78,7 @@ public class P2PConnectionThread extends Thread {
 
 			in.read(b);
 			byte[] sub = Arrays.copyOfRange(b, 28, 32);
-
-			String peer = new String(sub);
-			Integer peerId = Integer.parseInt(peer);
+			Integer peerId = MessageUtil.byteArrayToInteger(sub);
 
 			System.out.println("The peer id is " + peerId);
 

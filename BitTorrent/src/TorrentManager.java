@@ -169,18 +169,23 @@ public class TorrentManager extends Thread {
 					if (count >= preferredNeighborCount) {
 						if (peer.peerId != optimisticallyUnchokedPeer) {
 							chokedList.add(peer);
-							peersInterestedInMe.get(peer.peerId).isChoked = true;
+							/*if(!peer.isChoked){
+								openTCPconnections.get(peer.peerId).sendChokeMessage();
+							}*/
 						}
 
 					} else {
 						unchokedList.add(peer);
-						peersInterestedInMe.get(peer.peerId).isChoked = false;
+						/*if(peer.isChoked){
+							openTCPconnections.get(peer.peerId).sendUnChokeMsg();
+						}*/
+						
 					}
 					count++;
 				}
 
 			}
-			// openTCPconnections.notifyAll();
+			
 			System.out.println(Arrays.toString(unchokedList.toArray()));
 
 		}
@@ -197,15 +202,18 @@ public class TorrentManager extends Thread {
 				PeerConfig peer = chokedList.remove(random);
 				unchokedList.add(peer);
 				optimisticallyUnchokedPeer = peer.peerId;
-
-				peersInterestedInMe.get(peer.peerId).isChoked = false;
-
-				// openTCPconnections.notifyAll();
+				
+				if(peersInterestedInMe.get(peer.peerId).isChoked){
+					//openTCPconnections.get(optimisticallyUnchokedPeer).sendUnChokeMsg();
+				}
+				
 			}
-
+			System.out.println(optimisticallyUnchokedPeer);
+			
 		}
 	};
 
+	
 	public void shutdownTorrent() {
 
 	}

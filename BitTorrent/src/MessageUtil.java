@@ -26,10 +26,11 @@ public class MessageUtil {
 
 	}
 
-	public static byte[] getMessageHeader(byte peerId) {
+	public static byte[] getMessageHeader(int peerId) {
 
+		byte[] paddedPeerid = integerToByteArray(peerId);
 		byte[] temp = concat(HANDSHAKE_HEADER, ZERO_BITS);
-		byte[] result = concat(temp, peerId);
+		byte[] result = concat(temp, paddedPeerid);
 
 		return result;
 	}
@@ -55,6 +56,15 @@ public class MessageUtil {
 		arr[3] = (byte) (intVal & 0x000000FF);
 
 		return arr;
+	}
+
+	public static int byteArrayToInteger(byte[] b) {
+		int ret = 0;
+		for (int i = 0; i < 4; i++) {
+			int shift = (4 - 1 - i) * 8;
+			ret += (b[i] & 0x000000FF) << shift;
+		}
+		return ret;
 	}
 
 	public static byte[] concat(byte[] arr, byte val) {
