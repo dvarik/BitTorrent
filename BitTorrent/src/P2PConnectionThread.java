@@ -108,6 +108,7 @@ public class P2PConnectionThread extends Thread {
 	}
 
 
+
 	public void sendBitFieldMessage()
 	{
 		try {

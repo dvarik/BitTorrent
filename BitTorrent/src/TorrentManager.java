@@ -4,8 +4,15 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Random;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 /**
  * @author dvarik
@@ -27,10 +34,16 @@ public class TorrentManager extends Thread {
 
 	List<P2PConnectionThread> openTCPconnections = new ArrayList<P2PConnectionThread>();
 
-	static volatile HashMap<Integer, PeerConfig> unchokedPeers = null;
+	
+	static volatile int optimisticallyUnchokedPeer = -1;
+	static List<PeerConfig> unchokedList = Collections.synchronizedList(new ArrayList<PeerConfig>());
 
-	static volatile PeerConfig optimisticallyUnchokedPeer = null;
+	static List<PeerConfig> chokedList = Collections.synchronizedList(new ArrayList<PeerConfig>());
 
+	static ConcurrentHashMap<Integer, PeerConfig> peersInterestedInMe = new ConcurrentHashMap<Integer, PeerConfig>();
+
+	
+	
 	public TorrentManager(int peerId, int optimisticUnchoke, int preferredUnchoke, int preferredNeighbor) {
 
 		this.myPeerId = peerId;
@@ -50,7 +63,7 @@ public class TorrentManager extends Thread {
 	@Override
 	public void run() {
 
-		
+		PeerConfig myPeerInfo = ConfigurationReader.getInstance().getPeerInfo().get(myPeerId);
 		
 		establishClientConnections();
 
@@ -58,13 +71,15 @@ public class TorrentManager extends Thread {
 		
 		
 		
-		/*ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(3);
+		ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(3);
 
-		 ScheduledFuture<V> scheduledFuture =
-		 scheduledExecutorService.scheduleAtFixedRate(findPreferredNeighbours,
-		 preferredUnchokeInterval, TimeUnit.SECONDS);
-		 
-		 */
+		ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(2);
+
+		scheduler.scheduleAtFixedRate(findPreferredNeighbour, 0,
+				preferredUnchokeInterval, TimeUnit.SECONDS);
+
+		scheduler.scheduleAtFixedRate(findOptimisticallyUnchokedNeighbour, 0,
+				optimisticUnchokeInterval, TimeUnit.SECONDS);
 
 	}
 
@@ -89,7 +104,7 @@ public class TorrentManager extends Thread {
 							.println("Connected to " + currPeerInfo.hostName + " on port number " + currPeerInfo.port);
 
 					openTCPconnections.add(p);
-					
+
 					p.start();
 
 				} catch (ConnectException e) {
@@ -139,20 +154,66 @@ public class TorrentManager extends Thread {
 		}
 
 	}
-	
-	
+
 	/*
 	 * below 3 methods need to be implemented as scheduled tasks
 	 */
 
-	public void findPreferredNeighbours(int k, int p) {
+	final Runnable findPreferredNeighbour = new Runnable() {
 
-	}
+		@Override
+		public void run() {
 
-	public void findOptimisticallyUnchokedNeighbour(int p) {
+			if (peersInterestedInMe != null) {
 
-	}
-	
+				unchokedList.clear();
+				chokedList.clear();
+				int count = 0;
+
+				List<PeerConfig> peers = new ArrayList<PeerConfig>(peersInterestedInMe.values());
+				Collections.sort(peers, new DownloadComparator<PeerConfig>());
+
+				for (PeerConfig peer : peers) {
+					if (count >= preferredNeighborCount) {
+						if (peer.getPeerId() != optimisticallyUnchokedPeer) {
+							chokedList.add(peer);
+							peersInterestedInMe.get(peer.peerId).isChoked = true;
+						}
+
+					} else {
+						unchokedList.add(peer);
+						peersInterestedInMe.get(peer.peerId).isChoked = false;
+					}
+					count++;
+				}
+
+			}
+			// openTCPconnections.notifyAll();
+			System.out.println(Arrays.toString(unchokedList.toArray()));
+
+		}
+	};
+
+	final Runnable findOptimisticallyUnchokedNeighbour = new Runnable() {
+
+		@Override
+		public void run() {
+
+			if (!chokedList.isEmpty()) {
+				int random = new Random().nextInt(chokedList.size());
+
+				PeerConfig peer = chokedList.remove(random);
+				unchokedList.add(peer);
+				optimisticallyUnchokedPeer = peer.peerId;
+
+				peersInterestedInMe.get(peer.peerId).isChoked = false;
+
+				// openTCPconnections.notifyAll();
+			}
+
+		}
+	};
+
 	public void shutdownTorrent() {
 
 	}

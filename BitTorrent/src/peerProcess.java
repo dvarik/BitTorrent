@@ -19,7 +19,7 @@ public class peerProcess {
 
 		int p = Integer.parseInt(comProp.get("UnchokingInterval"));
 		
-		TorrentManager manager = new TorrentManager(myPeerId, m, k, p);
+		TorrentManager manager = new TorrentManager(myPeerId, m, p,k);
 
 		manager.run();
 		

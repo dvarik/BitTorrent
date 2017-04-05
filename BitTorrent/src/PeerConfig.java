@@ -11,7 +11,9 @@ public class PeerConfig {
 	int port;
 	int hasFile;
 	byte[] bitfield;
-	
+	boolean isChoked = true;
+	long downloadRate;
+
 	public PeerConfig(int peerId, String hostName, int port, int hasFile) {
 		super();
 		
