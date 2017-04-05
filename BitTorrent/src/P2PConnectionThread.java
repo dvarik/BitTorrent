@@ -19,7 +19,9 @@ public class P2PConnectionThread extends Thread {
 
 	// send recieve data from this peer accordingly
 
-	private final int peerId;
+	private final PeerConfig myInfo;
+
+	private PeerConfig peerInfo;
 
 	private final boolean isClientConnection;
 
@@ -31,7 +33,7 @@ public class P2PConnectionThread extends Thread {
 
 	private final LoggerUtility logger;
 
-	public P2PConnectionThread(int peerId, Socket s, boolean isClient) throws Exception {
+	public P2PConnectionThread(PeerConfig myPeerI, PeerConfig neighbourPeerI, Socket s, boolean isClient) throws Exception {
 		super();
 
 		this.isClientConnection = isClient;
@@ -45,28 +47,32 @@ public class P2PConnectionThread extends Thread {
 			e.printStackTrace();
 		}
 
+		this.myInfo = myPeerI;
+		this.peerInfo = neighbourPeerI;
 		if (this.isClientConnection) {
 
-			this.peerId = peerId;
-
 			sendHandshakeMsg();
-			if (receiveHandshakeMsg() != this.peerId)
+			if (receiveHandshakeMsg() != this.peerInfo.peerId)
 				throw new Exception("Error in handshake!");
 
 		} else {
-
-			this.peerId = receiveHandshakeMsg();
-			if (this.peerId == -1)
+			int neighId = receiveHandshakeMsg();
+			if (neighId != -1)
+			{
+				this.peerInfo = ConfigurationReader.getInstance().getPeerInfo().get(neighId);
+				sendHandshakeMsg();
+			}
+			else
 				throw new Exception("Error in handshake!");
-			sendHandshakeMsg();
+
 		}
-		this.logger = new LoggerUtility(peerId);
+		this.logger = new LoggerUtility(peerInfo.peerId);
 
 	}
 
 	public void sendHandshakeMsg() {
 
-		byte[] messageHeader = MessageUtil.getMessageHeader((byte) peerId);
+		byte[] messageHeader = MessageUtil.getMessageHeader((byte) peerInfo.getPeerId());
 
 		try {
 			out.write(messageHeader);
@@ -100,5 +106,150 @@ public class P2PConnectionThread extends Thread {
 		return -1;
 
 	}
+
+
+	public void sendBitFieldMessage()
+	{
+		try {
+			byte[] myBitfield = myInfo.getBitfield();
+			byte[] message = MessageUtil.getMessage(myBitfield, MessageType.BITFIELD);
+			out.write(message);
+			out.flush();
+		} catch (IOException e) {
+			System.out.println("Send bitfield message failed!");
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+
+
+	public void readNeighbourBitfieldMessage() 
+	{
+		try {
+			byte[] bitfield = null;
+			byte[] msgLenArr = new byte[4];
+			int msgLen = in.read(msgLenArr);
+			if (msgLen != 4) 
+			{
+				System.out.println("Message length is incorrect!");
+			}
+			int tempDataLength = MessageUtil.byteArrayToInt(msgLenArr);
+			//read msg type
+			byte[] msgType = new byte[1];
+			in.read(msgType);
+			if (msgType[0] == MessageType.BITFIELD.value) 
+			{
+				int dataLength = tempDataLength - 1;
+				bitfield = new byte[dataLength];
+				bitfield = MessageUtil.readBytes(in, bitfield, dataLength);
+				peerInfo.setBitfield(bitfield);
+			}
+			else
+			{
+				System.out.println("Wrong message type sent");
+			}
+			
+		} 
+		catch (IOException e) {
+			System.out.println("Could not read length of actual message");
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+
+	}
+
+	
+	public synchronized  void updatePeerBitFieldMsg(int pieceIndex) {
+        int byteIndex = 7 - (pieceIndex % 8);
+        byte[] peerBitfield = peerInfo.getBitfield();
+        peerBitfield[pieceIndex / 8] |= (1 << byteIndex);
+        peerInfo.setBitfield(peerBitfield);
+    }
+	
+	
+	public void sendHaveMsg(int pieceIndex) {
+        byte[] message = MessageUtil.getMessage(MessageUtil.intToByteArray(pieceIndex), MessageType.HAVE);
+        try {
+            out.write(message);
+            out.flush();
+
+        } catch (IOException e) {
+            System.out.println("Send have message failed! " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+	
+	
+	public void isInterested()
+	{
+
+	}
+
+
+	public void sendInterestedMessage()
+	{
+
+		byte[] message = MessageUtil.getMessage(MessageType.INTERESTED);
+
+		try {
+			out.write(message);
+			out.flush();
+		} catch (IOException e) {
+			logger.log("Send interested failed! " + e.getMessage());
+			e.printStackTrace();
+		}
+
+	}
+
+
+	public void sendNotInterestedMessage()
+	{
+
+		byte[] message = MessageUtil.getMessage(MessageType.NOT_INTERESTED);
+
+		try {
+			out.write(message);
+			out.flush();
+		} catch (IOException e) {
+			logger.log("Send not interested failed !! " + e.getMessage());
+			e.printStackTrace();
+		}
+
+	}
+
+
+	public void sendChokeMessage()
+	{
+
+		byte[] message = MessageUtil.getMessage(MessageType.CHOKE);
+
+		try {
+			out.write(message);
+			out.flush();
+		} catch (IOException e) {
+			logger.log("Send choke failed !! " + e.getMessage());
+			e.printStackTrace();
+		}
+
+
+	}
+
+
+	public void sendUnchokeMessage()
+	{
+
+		byte[] message = MessageUtil.getMessage(MessageType.UNCHOKE);
+
+		try {
+			out.write(message);
+			out.flush();
+		} catch (IOException e) {
+			logger.log("Send unchoke failed !! " + e.getMessage());
+			e.printStackTrace();
+		}
+
+	}
+
+
 
 }

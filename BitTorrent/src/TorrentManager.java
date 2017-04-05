@@ -14,6 +14,8 @@ import java.util.List;
 public class TorrentManager extends Thread {
 
 	final int myPeerId;
+	
+	final PeerConfig myPeerInfo;
 
 	final LoggerUtility logger;
 
@@ -28,11 +30,12 @@ public class TorrentManager extends Thread {
 	static volatile HashMap<Integer, PeerConfig> unchokedPeers = null;
 
 	static volatile PeerConfig optimisticallyUnchokedPeer = null;
-	
 
 	public TorrentManager(int peerId, int optimisticUnchoke, int preferredUnchoke, int preferredNeighbor) {
 
 		this.myPeerId = peerId;
+
+		this.myPeerInfo = ConfigurationReader.getInstance().getPeerInfo().get(myPeerId);
 
 		this.logger = new LoggerUtility(myPeerId);
 
@@ -47,11 +50,13 @@ public class TorrentManager extends Thread {
 	@Override
 	public void run() {
 
-		PeerConfig myPeerInfo = ConfigurationReader.getInstance().getPeerInfo().get(myPeerId);
-
+		
+		
 		establishClientConnections();
 
 		acceptConnections(myPeerInfo.getPort());
+		
+		
 		
 		/*ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(3);
 
@@ -75,7 +80,7 @@ public class TorrentManager extends Thread {
 
 				try {
 					// create a socket to connect to the peer
-					P2PConnectionThread p = new P2PConnectionThread(currPeerId,
+					P2PConnectionThread p = new P2PConnectionThread(myPeerInfo, currPeerInfo,
 							new Socket(currPeerInfo.hostName, currPeerInfo.port), true);
 
 					logger.log("Peer " + myPeerId + " makes a connection to Peer " + currPeerId);
@@ -121,7 +126,7 @@ public class TorrentManager extends Thread {
 			while (expectedConnections > 0) {
 				Socket acceptedSocket = serverSocket.accept();
 				if (acceptedSocket != null) {
-					P2PConnectionThread peerThread = new P2PConnectionThread(-1, acceptedSocket, false);
+					P2PConnectionThread peerThread = new P2PConnectionThread(myPeerInfo, null, acceptedSocket, false);
 					openTCPconnections.add(peerThread);
 					peerThread.start();
 					expectedConnections--;
