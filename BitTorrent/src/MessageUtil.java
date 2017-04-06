@@ -130,5 +130,12 @@ public class MessageUtil {
 	        }
 	        return byteArray;
 	    }
+	 
+	 public static int getNumPieces()
+		{
+			int fileSize = Integer.parseInt(ConfigurationReader.getInstance().getCommonProps().get("FileSize"));
+			int pieceSize = Integer.parseInt(ConfigurationReader.getInstance().getCommonProps().get("PieceSize"));
+			return (int) Math.ceil(fileSize/pieceSize);
+		}
 
 }

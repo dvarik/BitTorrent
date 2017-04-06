@@ -34,8 +34,8 @@ public class TorrentManager extends Thread {
 
 	List<P2PConnectionThread> openTCPconnections = new ArrayList<P2PConnectionThread>();
 
-	
 	static volatile int optimisticallyUnchokedPeer = -1;
+	
 	static List<PeerConfig> unchokedList = Collections.synchronizedList(new ArrayList<PeerConfig>());
 
 	static List<PeerConfig> chokedList = Collections.synchronizedList(new ArrayList<PeerConfig>());
@@ -69,10 +69,6 @@ public class TorrentManager extends Thread {
 
 		acceptConnections(myPeerInfo.getPort());
 		
-		
-		
-		ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(3);
-
 		ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(2);
 
 		scheduler.scheduleAtFixedRate(findPreferredNeighbour, 0,

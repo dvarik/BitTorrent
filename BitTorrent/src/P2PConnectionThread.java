@@ -65,7 +65,7 @@ public class P2PConnectionThread extends Thread {
 
 	public void sendHandshakeMsg() {
 
-		byte[] messageHeader = MessageUtil.getMessageHeader(peerInfo.getPeerId());
+		byte[] messageHeader = MessageUtil.getMessageHeader(myInfo.getPeerId());
 
 		try {
 			out.write(messageHeader);
@@ -115,7 +115,6 @@ public class P2PConnectionThread extends Thread {
 			out.flush();
 		} catch (IOException e) {
 			System.out.println("Send bitfield message failed!");
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}

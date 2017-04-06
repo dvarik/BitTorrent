@@ -21,8 +21,9 @@ public class PeerConfig {
 		this.hostName = hostName;
 		this.port = port;
 		this.hasFile = hasFile;
-		int numPieces = getNumPieces();
-		if(this.hasFile==1)
+		int numPieces = MessageUtil.getNumPieces();
+		
+		if(this.hasFile == 1)
 		{
 			if (numPieces % 8 == 0) 
 			{
@@ -47,12 +48,6 @@ public class PeerConfig {
 		}
 	}
 
-	public static int getNumPieces()
-	{
-		int fileSize = Integer.parseInt(ConfigurationReader.getInstance().getCommonProps().get("FileSize"));
-		int pieceSize = Integer.parseInt(ConfigurationReader.getInstance().getCommonProps().get("PieceSize"));
-		return (int) Math.ceil(fileSize/pieceSize);
-	}
 	
 	public int getPeerId() {
 		return peerId;
