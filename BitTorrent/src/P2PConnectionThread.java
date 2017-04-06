@@ -98,7 +98,13 @@ public class P2PConnectionThread extends Thread {
 
 	}
 
+	@Override
+	public void run() {
 
+		// send receive messages
+	
+	
+	}
 
 	public void sendBitFieldMessage()
 	{
