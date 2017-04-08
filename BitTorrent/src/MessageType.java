@@ -17,5 +17,15 @@ public enum MessageType {
 	public void setValue(byte value) {
 		this.value = value;
 	}
+	
+	public static MessageType getType(byte value) {
+
+		for (MessageType t : MessageType.values()) {
+			if (t.value == value) {
+				return t;
+			}
+		}
+		return null;
+	}
 
 }

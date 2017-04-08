@@ -124,6 +124,42 @@ public class P2PConnectionThread extends Thread {
 
 		scheduler.execute(sendChoke);
 		scheduler.execute(sendUnchoke);
+		
+		while(!shutdown){
+			 
+			byte[] message = new byte[5];
+            
+			try {
+				MessageUtil.readMessage(in, message, 5);
+				byte typeVal = message[4];
+	            MessageType msgType = MessageType.getType(typeVal);
+	            
+	            switch(msgType) {
+	            
+				case BITFIELD:
+					break;
+				case HAVE:
+					break;
+				case INTERESTED:
+					break;
+				case NOT_INTERESTED:
+					break;
+				case PIECE:
+					break;
+				case REQUEST:
+					break;
+				case UNCHOKE:
+					break;
+				default:
+					break;            
+	            
+	            }
+	            
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+			
+		}
 
 	}
 
@@ -147,14 +183,14 @@ public class P2PConnectionThread extends Thread {
 			if (msgLen != 4) {
 				System.out.println("Message length is incorrect!");
 			}
-			int tempDataLength = MessageUtil.byteArrayToInt(msgLenArr);
+			int tempDataLength = MessageUtil.byteArrayToInteger(msgLenArr);
 			// read msg type
 			byte[] msgType = new byte[1];
 			in.read(msgType);
 			if (msgType[0] == MessageType.BITFIELD.value) {
 				int dataLength = tempDataLength - 1;
 				bitfield = new byte[dataLength];
-				bitfield = MessageUtil.readBytes(in, bitfield, dataLength);
+				MessageUtil.readMessage(in, bitfield, dataLength);
 				peerInfo.setBitfield(bitfield);
 			} else {
 				System.out.println("Wrong message type sent");
@@ -176,7 +212,7 @@ public class P2PConnectionThread extends Thread {
 	}
 
 	public void sendHaveMsg(int pieceIndex) {
-		byte[] message = MessageUtil.getMessage(MessageUtil.intToByteArray(pieceIndex), MessageType.HAVE);
+		byte[] message = MessageUtil.getMessage(MessageUtil.integerToByteArray(pieceIndex), MessageType.HAVE);
 		try {
 			out.write(message);
 			out.flush();
@@ -297,7 +333,7 @@ public class P2PConnectionThread extends Thread {
 			System.out.println("Cannot close socket for peer " + myInfo.peerId);
 			e.printStackTrace();
 		}
-		
+
 		scheduler.shutdown();
 
 	}
