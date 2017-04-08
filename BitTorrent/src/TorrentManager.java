@@ -42,6 +42,8 @@ public class TorrentManager extends Thread {
 
 	static ConcurrentHashMap<Integer, PeerConfig> peersInterestedInMe = new ConcurrentHashMap<Integer, PeerConfig>();
 
+	ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(3);
+
 	public TorrentManager(int peerId, int optimisticUnchoke, int preferredUnchoke, int preferredNeighbor) {
 
 		this.myPeerId = peerId;
@@ -67,13 +69,12 @@ public class TorrentManager extends Thread {
 
 		acceptConnections(myPeerInfo.getPort());
 
-		ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(2);
-
 		scheduler.scheduleAtFixedRate(findPreferredNeighbour, 0, preferredUnchokeInterval, TimeUnit.SECONDS);
 
 		scheduler.scheduleAtFixedRate(findOptimisticallyUnchokedNeighbour, 0, optimisticUnchokeInterval,
 				TimeUnit.SECONDS);
-
+		
+		scheduler.scheduleAtFixedRate(shutdownTorrent, 3, 5, TimeUnit.SECONDS);
 	}
 
 	public void establishClientConnections() {
@@ -226,8 +227,48 @@ public class TorrentManager extends Thread {
 		return null;
 	}
 
-	public void shutdownTorrent() {
+	final Runnable shutdownTorrent = new Runnable() {
 
-	}
+		@Override
+		public void run() {
+
+			PeerConfig myPeerInfo = ConfigurationReader.getInstance().getPeerInfo().get(myPeerId);
+
+			byte[] myBitField = myPeerInfo.getBitfield();
+
+			if (openTCPconnections.size() == ConfigurationReader.getInstance().getPeerInfo().size()) {
+
+				boolean shutDown = true;
+
+				for (P2PConnectionThread p : openTCPconnections) {
+					byte[] pBitFieldMsg = p.getPeerInfo().getBitfield();
+					if (Arrays.equals(pBitFieldMsg, myBitField) == false) {
+						shutDown = false;
+						break;
+					}
+				}
+
+				if (shutDown) {
+					for (P2PConnectionThread p : openTCPconnections) {
+						p.shutDownCleanly();
+						p.interrupt();
+					}
+
+					System.out.println("Scheduler shutdown called.");
+
+					scheduler.shutdown();
+					if (!scheduler.isShutdown()) {
+						System.out.println("Did not shutdown torrent");
+					}
+					try {
+						scheduler.awaitTermination(5, TimeUnit.SECONDS);
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+					}
+				}
+			}
+
+		}
+	};
 
 }

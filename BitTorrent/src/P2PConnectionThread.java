@@ -5,10 +5,8 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
 import java.util.Arrays;
-import java.util.Random;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 
 /**
  * @author dvarik
@@ -33,6 +31,10 @@ public class P2PConnectionThread extends Thread {
 	private volatile Object signalChoke;
 
 	private volatile Object signalUnchoke;
+
+	ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(2);
+
+	private volatile boolean shutdown = false;
 
 	public P2PConnectionThread(PeerConfig myPeerI, PeerConfig neighbourPeerI, Socket s, boolean isClient)
 			throws Exception {
@@ -119,10 +121,6 @@ public class P2PConnectionThread extends Thread {
 
 	@Override
 	public void run() {
-
-		// send receive messages
-
-		ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(2);
 
 		scheduler.execute(sendChoke);
 		scheduler.execute(sendUnchoke);
@@ -258,7 +256,10 @@ public class P2PConnectionThread extends Thread {
 				try {
 					signalChoke.wait();
 				} catch (InterruptedException e) {
-					sendChokeMessage();
+					if (!shutdown)
+						sendChokeMessage();
+					else
+						break;
 				}
 			}
 		}
@@ -274,11 +275,31 @@ public class P2PConnectionThread extends Thread {
 				try {
 					signalUnchoke.wait();
 				} catch (InterruptedException e) {
-					sendUnchokeMessage();
+					if (!shutdown)
+						sendUnchokeMessage();
+					else
+						break;
 				}
 			}
 		}
 
 	};
+
+	public void shutDownCleanly() {
+
+		shutdown = true;
+
+		try {
+			if (!socket.isClosed()) {
+				socket.close();
+			}
+		} catch (IOException e) {
+			System.out.println("Cannot close socket for peer " + myInfo.peerId);
+			e.printStackTrace();
+		}
+		
+		scheduler.shutdown();
+
+	}
 
 }
