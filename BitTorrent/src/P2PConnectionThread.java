@@ -5,6 +5,10 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
 import java.util.Arrays;
+import java.util.Random;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 /**
  * @author dvarik
@@ -26,7 +30,12 @@ public class P2PConnectionThread extends Thread {
 
 	private final LoggerUtility logger;
 
-	public P2PConnectionThread(PeerConfig myPeerI, PeerConfig neighbourPeerI, Socket s, boolean isClient) throws Exception {
+	private volatile Object signalChoke;
+
+	private volatile Object signalUnchoke;
+
+	public P2PConnectionThread(PeerConfig myPeerI, PeerConfig neighbourPeerI, Socket s, boolean isClient)
+			throws Exception {
 		super();
 
 		this.isClientConnection = isClient;
@@ -50,17 +59,27 @@ public class P2PConnectionThread extends Thread {
 
 		} else {
 			int neighId = receiveHandshakeMsg();
-			if (neighId != -1)
-			{
+			if (neighId != -1) {
 				this.peerInfo = ConfigurationReader.getInstance().getPeerInfo().get(neighId);
 				sendHandshakeMsg();
-			}
-			else
+			} else
 				throw new Exception("Error in handshake!");
 
 		}
 		this.logger = new LoggerUtility(peerInfo.peerId);
-		
+
+	}
+
+	public PeerConfig getPeerInfo() {
+		return this.peerInfo;
+	}
+
+	public Object getChokeSignal() {
+		return this.signalChoke;
+	}
+
+	public Object getUnchokeSignal() {
+		return this.signalUnchoke;
 	}
 
 	public void sendHandshakeMsg() {
@@ -102,12 +121,15 @@ public class P2PConnectionThread extends Thread {
 	public void run() {
 
 		// send receive messages
-	
-	
+
+		ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(2);
+
+		scheduler.execute(sendChoke);
+		scheduler.execute(sendUnchoke);
+
 	}
 
-	public void sendBitFieldMessage()
-	{
+	public void sendBitFieldMessage() {
 		try {
 			byte[] myBitfield = myInfo.getBitfield();
 			byte[] message = MessageUtil.getMessage(myBitfield, MessageType.BITFIELD);
@@ -119,35 +141,28 @@ public class P2PConnectionThread extends Thread {
 		}
 	}
 
-
-	public void readNeighbourBitfieldMessage() 
-	{
+	public void readNeighbourBitfieldMessage() {
 		try {
 			byte[] bitfield = null;
 			byte[] msgLenArr = new byte[4];
 			int msgLen = in.read(msgLenArr);
-			if (msgLen != 4) 
-			{
+			if (msgLen != 4) {
 				System.out.println("Message length is incorrect!");
 			}
 			int tempDataLength = MessageUtil.byteArrayToInt(msgLenArr);
-			//read msg type
+			// read msg type
 			byte[] msgType = new byte[1];
 			in.read(msgType);
-			if (msgType[0] == MessageType.BITFIELD.value) 
-			{
+			if (msgType[0] == MessageType.BITFIELD.value) {
 				int dataLength = tempDataLength - 1;
 				bitfield = new byte[dataLength];
 				bitfield = MessageUtil.readBytes(in, bitfield, dataLength);
 				peerInfo.setBitfield(bitfield);
-			}
-			else
-			{
+			} else {
 				System.out.println("Wrong message type sent");
 			}
-			
-		} 
-		catch (IOException e) {
+
+		} catch (IOException e) {
 			System.out.println("Could not read length of actual message");
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -155,36 +170,30 @@ public class P2PConnectionThread extends Thread {
 
 	}
 
-	
-	public synchronized  void updatePeerBitFieldMsg(int pieceIndex) {
-        int byteIndex = 7 - (pieceIndex % 8);
-        byte[] peerBitfield = peerInfo.getBitfield();
-        peerBitfield[pieceIndex / 8] |= (1 << byteIndex);
-        peerInfo.setBitfield(peerBitfield);
-    }
-	
-	
-	public void sendHaveMsg(int pieceIndex) {
-        byte[] message = MessageUtil.getMessage(MessageUtil.intToByteArray(pieceIndex), MessageType.HAVE);
-        try {
-            out.write(message);
-            out.flush();
+	public void updatePeerBitFieldMsg(int pieceIndex) {
+		int byteIndex = 7 - (pieceIndex % 8);
+		byte[] peerBitfield = peerInfo.getBitfield();
+		peerBitfield[pieceIndex / 8] |= (1 << byteIndex);
+		peerInfo.setBitfield(peerBitfield);
+	}
 
-        } catch (IOException e) {
-            System.out.println("Send have message failed! " + e.getMessage());
-            e.printStackTrace();
-        }
-    }
-	
-	
-	public void isInterested()
-	{
+	public void sendHaveMsg(int pieceIndex) {
+		byte[] message = MessageUtil.getMessage(MessageUtil.intToByteArray(pieceIndex), MessageType.HAVE);
+		try {
+			out.write(message);
+			out.flush();
+
+		} catch (IOException e) {
+			System.out.println("Send have message failed! " + e.getMessage());
+			e.printStackTrace();
+		}
+	}
+
+	public void isInterested() {
 
 	}
 
-
-	public void sendInterestedMessage()
-	{
+	public void sendInterestedMessage() {
 
 		byte[] message = MessageUtil.getMessage(MessageType.INTERESTED);
 
@@ -198,9 +207,7 @@ public class P2PConnectionThread extends Thread {
 
 	}
 
-
-	public void sendNotInterestedMessage()
-	{
+	public void sendNotInterestedMessage() {
 
 		byte[] message = MessageUtil.getMessage(MessageType.NOT_INTERESTED);
 
@@ -214,9 +221,7 @@ public class P2PConnectionThread extends Thread {
 
 	}
 
-
-	public void sendChokeMessage()
-	{
+	public void sendChokeMessage() {
 
 		byte[] message = MessageUtil.getMessage(MessageType.CHOKE);
 
@@ -228,12 +233,9 @@ public class P2PConnectionThread extends Thread {
 			e.printStackTrace();
 		}
 
-
 	}
 
-
-	public void sendUnchokeMessage()
-	{
+	public void sendUnchokeMessage() {
 
 		byte[] message = MessageUtil.getMessage(MessageType.UNCHOKE);
 
@@ -247,6 +249,36 @@ public class P2PConnectionThread extends Thread {
 
 	}
 
+	final Runnable sendChoke = new Runnable() {
 
+		@Override
+		public void run() {
+
+			while (true) {
+				try {
+					signalChoke.wait();
+				} catch (InterruptedException e) {
+					sendChokeMessage();
+				}
+			}
+		}
+
+	};
+
+	final Runnable sendUnchoke = new Runnable() {
+
+		@Override
+		public void run() {
+
+			while (true) {
+				try {
+					signalUnchoke.wait();
+				} catch (InterruptedException e) {
+					sendUnchokeMessage();
+				}
+			}
+		}
+
+	};
 
 }

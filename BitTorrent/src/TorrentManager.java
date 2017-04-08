@@ -21,7 +21,7 @@ import java.util.concurrent.TimeUnit;
 public class TorrentManager extends Thread {
 
 	final int myPeerId;
-	
+
 	final PeerConfig myPeerInfo;
 
 	final LoggerUtility logger;
@@ -35,15 +35,13 @@ public class TorrentManager extends Thread {
 	List<P2PConnectionThread> openTCPconnections = new ArrayList<P2PConnectionThread>();
 
 	static volatile int optimisticallyUnchokedPeer = -1;
-	
+
 	static List<PeerConfig> unchokedList = Collections.synchronizedList(new ArrayList<PeerConfig>());
 
 	static List<PeerConfig> chokedList = Collections.synchronizedList(new ArrayList<PeerConfig>());
 
 	static ConcurrentHashMap<Integer, PeerConfig> peersInterestedInMe = new ConcurrentHashMap<Integer, PeerConfig>();
 
-	
-	
 	public TorrentManager(int peerId, int optimisticUnchoke, int preferredUnchoke, int preferredNeighbor) {
 
 		this.myPeerId = peerId;
@@ -64,18 +62,17 @@ public class TorrentManager extends Thread {
 	public void run() {
 
 		PeerConfig myPeerInfo = ConfigurationReader.getInstance().getPeerInfo().get(myPeerId);
-		
+
 		establishClientConnections();
 
 		acceptConnections(myPeerInfo.getPort());
-		
+
 		ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(2);
 
-		scheduler.scheduleAtFixedRate(findPreferredNeighbour, 0,
-				preferredUnchokeInterval, TimeUnit.SECONDS);
+		scheduler.scheduleAtFixedRate(findPreferredNeighbour, 0, preferredUnchokeInterval, TimeUnit.SECONDS);
 
-		scheduler.scheduleAtFixedRate(findOptimisticallyUnchokedNeighbour, 0,
-				optimisticUnchokeInterval, TimeUnit.SECONDS);
+		scheduler.scheduleAtFixedRate(findOptimisticallyUnchokedNeighbour, 0, optimisticUnchokeInterval,
+				TimeUnit.SECONDS);
 
 	}
 
@@ -173,23 +170,23 @@ public class TorrentManager extends Thread {
 					if (count >= preferredNeighborCount) {
 						if (peer.getPeerId() != optimisticallyUnchokedPeer) {
 							chokedList.add(peer);
-							/*if(!peer.isChoked){
-								openTCPconnections.get(peer.peerId).sendChokeMessage();
-							}*/
+							if (!peer.isChoked) {
+								getConnectionByPeerID(peer.peerId).getChokeSignal().notify();
+							}
 						}
 
 					} else {
 						unchokedList.add(peer);
-						/*if(peer.isChoked){
-							openTCPconnections.get(peer.peerId).sendUnChokeMsg();
-						}*/
-						
+						if (peer.isChoked) {
+							getConnectionByPeerID(peer.peerId).getUnchokeSignal().notify();
+						}
+
 					}
 					count++;
 				}
 
 			}
-			
+
 			System.out.println(Arrays.toString(unchokedList.toArray()));
 
 		}
@@ -206,18 +203,28 @@ public class TorrentManager extends Thread {
 				PeerConfig peer = chokedList.remove(random);
 				unchokedList.add(peer);
 				optimisticallyUnchokedPeer = peer.peerId;
-				
-				if(peersInterestedInMe.get(peer.peerId).isChoked){
-					//openTCPconnections.get(optimisticallyUnchokedPeer).sendUnChokeMsg();
+
+				if (peersInterestedInMe.get(peer.peerId).isChoked) {
+					getConnectionByPeerID(optimisticallyUnchokedPeer).getUnchokeSignal().notify();
 				}
-				
+
 			}
 			System.out.println(optimisticallyUnchokedPeer);
-			
+
 		}
 	};
 
-	
+	public P2PConnectionThread getConnectionByPeerID(int id) {
+
+		for (P2PConnectionThread thread : openTCPconnections) {
+			if (thread.getPeerInfo().peerId == id)
+				return thread;
+		}
+
+		return null;
+
+	}
+
 	public void shutdownTorrent() {
 
 	}
