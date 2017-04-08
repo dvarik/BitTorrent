@@ -172,6 +172,7 @@ public class TorrentManager extends Thread {
 							chokedList.add(peer);
 							if (!peer.isChoked) {
 								getConnectionByPeerID(peer.peerId).getChokeSignal().notify();
+								peersInterestedInMe.get(peer.peerId).isChoked = true;
 							}
 						}
 
@@ -179,6 +180,7 @@ public class TorrentManager extends Thread {
 						unchokedList.add(peer);
 						if (peer.isChoked) {
 							getConnectionByPeerID(peer.peerId).getUnchokeSignal().notify();
+							peersInterestedInMe.get(peer.peerId).isChoked = false;
 						}
 
 					}
@@ -206,6 +208,7 @@ public class TorrentManager extends Thread {
 
 				if (peersInterestedInMe.get(peer.peerId).isChoked) {
 					getConnectionByPeerID(optimisticallyUnchokedPeer).getUnchokeSignal().notify();
+					peersInterestedInMe.get(peer.peerId).isChoked = false;
 				}
 
 			}
@@ -220,9 +223,7 @@ public class TorrentManager extends Thread {
 			if (thread.getPeerInfo().peerId == id)
 				return thread;
 		}
-
 		return null;
-
 	}
 
 	public void shutdownTorrent() {
