@@ -17,7 +17,7 @@ public class P2PConnectionThread extends Thread {
 
 	private final PeerConfig myInfo;
 
-	private PeerConfig peerInfo;
+	private final PeerConfig peerInfo;
 
 	private final boolean isClientConnection;
 
@@ -54,9 +54,10 @@ public class P2PConnectionThread extends Thread {
 		}
 
 		this.myInfo = myPeerI;
-		this.peerInfo = neighbourPeerI;
+		
 		if (this.isClientConnection) {
 
+			this.peerInfo = neighbourPeerI;
 			sendHandshakeMessage();
 			if (receiveHandshakeMessage() != this.peerInfo.peerId)
 				throw new Exception("Error in handshake!");
@@ -70,6 +71,7 @@ public class P2PConnectionThread extends Thread {
 				throw new Exception("Error in handshake!");
 
 		}
+		TorrentManager.messageStreams.put(peerInfo.peerId, out);
 		this.logger = LoggerUtility.getInstance(myInfo.peerId);
 
 	}

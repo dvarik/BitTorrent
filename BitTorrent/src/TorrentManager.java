@@ -2,6 +2,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.net.ConnectException;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -36,7 +37,7 @@ public class TorrentManager extends Thread {
 	final int preferredNeighborCount;
 
 	List<P2PConnectionThread> openTCPconnections = new ArrayList<P2PConnectionThread>();
-
+	
 	static volatile int optimisticallyUnchokedPeer = -1;
 
 	private byte[] fileData = null;
@@ -45,9 +46,12 @@ public class TorrentManager extends Thread {
 
 	static List<PeerConfig> chokedList = Collections.synchronizedList(new ArrayList<PeerConfig>());
 
-	static ConcurrentHashMap<Integer, PeerConfig> peersInterestedInMe = new ConcurrentHashMap<Integer, PeerConfig>();
-
+	public static ConcurrentHashMap<Integer, PeerConfig> peersInterestedInMe = new ConcurrentHashMap<Integer, PeerConfig>();
+	
+	public static ConcurrentHashMap<Integer, OutputStream> messageStreams = new ConcurrentHashMap<Integer, OutputStream>();
+	
 	ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(3);
+
 
 	public TorrentManager(int peerId, int optimisticUnchoke, int preferredUnchoke, int preferredNeighbor) {
 
