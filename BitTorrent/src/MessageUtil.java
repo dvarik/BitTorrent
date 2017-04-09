@@ -7,7 +7,7 @@ public class MessageUtil {
 
 	public static final byte[] ZERO_BITS = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 
-	public static byte[] getMessageHeader(final int peerId) {
+	public static byte[] getMessageHeader(int peerId) {
 
 		byte[] paddedPeerid = integerToByteArray(peerId);
 		byte[] temp = concat(HANDSHAKE_HEADER, ZERO_BITS);
@@ -16,18 +16,18 @@ public class MessageUtil {
 		return result;
 	}
 
-	public static byte[] getMessage(final MessageType mType) {
+	public static byte[] getMessage(MessageType mType) {
 		byte[] msgLength = integerToByteArray(1);
 		return concat(msgLength, mType.value);
 	}
 
-	public static byte[] getMessage(final byte[] payload, final MessageType mType) {
+	public static byte[] getMessage(byte[] payload, MessageType mType) {
 		byte[] msgLength = integerToByteArray(payload.length);
 		byte[] temp = concat(msgLength, mType.value);
 		return concat(temp, payload);
 	}
 
-	public static byte[] getMessage(final String payload, final MessageType msgType) {
+	public static byte[] getMessage(String payload, MessageType msgType) {
 		int l = payload.getBytes().length;
 		byte[] msgL = MessageUtil.integerToByteArray(l + 1); // plus one for
 																// message
@@ -36,21 +36,21 @@ public class MessageUtil {
 				MessageUtil.concatenateByteArray(msgType.value, payload.getBytes()));
 	}
 
-	public static byte[] concatenateByteArray(final byte b, final byte[] a) {
+	public static byte[] concatenateByteArray(byte b, byte[] a) {
 		byte[] result = new byte[a.length + 1];
 		System.arraycopy(a, 0, result, 0, a.length);
 		result[a.length] = b;
 		return result;
 	}
 
-	public static byte[] concatenateByteArrays(final byte[] a, final byte[] b) {
+	public static byte[] concatenateByteArrays(byte[] a, byte[] b) {
 		byte[] result = new byte[a.length + b.length];
 		System.arraycopy(a, 0, result, 0, a.length);
 		System.arraycopy(b, 0, result, a.length, b.length);
 		return result;
 	}
 
-	public static byte[] integerToByteArray(final int intVal) {
+	public static byte[] integerToByteArray(int intVal) {
 
 		byte[] arr = new byte[4];
 		arr[0] = (byte) ((intVal & 0xFF000000) >> 24);
@@ -61,7 +61,7 @@ public class MessageUtil {
 		return arr;
 	}
 
-	public static int byteArrayToInteger(final byte[] b) {
+	public static int byteArrayToInteger(byte[] b) {
 		int ret = 0;
 		for (int i = 0; i < 4; i++) {
 			int shift = (4 - 1 - i) * 8;
@@ -70,7 +70,7 @@ public class MessageUtil {
 		return ret;
 	}
 
-	public static byte[] concat(final byte[] arr, final byte val) {
+	public static byte[] concat(byte[] arr, byte val) {
 		byte[] result = new byte[arr.length + 1];
 
 		System.arraycopy(arr, 0, result, 0, arr.length);
@@ -79,7 +79,7 @@ public class MessageUtil {
 		return result;
 	}
 
-	public static byte[] concat(final byte[] arr1, final byte[] arr2) {
+	public static byte[] concat(byte[] arr1, byte[] arr2) {
 		byte[] result = new byte[arr1.length + arr2.length];
 
 		System.arraycopy(arr1, 0, result, 0, arr1.length);
@@ -87,7 +87,7 @@ public class MessageUtil {
 		return result;
 	}
 
-	public static byte[] concatenateByteArrays(final byte[] a, final int aLength, final byte[] b, final int bLength) {
+	public static byte[] concatenateByteArrays(byte[] a, int aLength, byte[] b, int bLength) {
 		byte[] result = new byte[aLength + bLength];
 		System.arraycopy(a, 0, result, 0, aLength);
 		System.arraycopy(b, 0, result, aLength, bLength);
