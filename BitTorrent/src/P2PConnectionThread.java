@@ -68,7 +68,7 @@ public class P2PConnectionThread extends Thread {
 				throw new Exception("Error in handshake!");
 
 		}
-		this.logger = new LoggerUtility(peerInfo.peerId);
+		this.logger = LoggerUtility.getInstance(peerInfo.peerId);
 
 	}
 

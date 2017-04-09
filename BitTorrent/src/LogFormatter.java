@@ -10,7 +10,7 @@ public class LogFormatter extends Formatter {
 		
         StringBuilder builder = new StringBuilder(1000);
         String timeStamp = calcTimeStamp(record.getMillis());
-        builder.append(timeStamp);
+        builder.append("[" + timeStamp + "]:");
         builder.append(" ");
         builder.append(record.getMessage());
         builder.append("\n");
@@ -20,7 +20,7 @@ public class LogFormatter extends Formatter {
 	
 	private String calcTimeStamp(long milliSeconds)
 	{
-		DateFormat formatter = new SimpleDateFormat("dd/MM/yyyy hh:mm:ss.SSS");
+		DateFormat formatter = new SimpleDateFormat("dd/MM/yyyy hh:mm:ss");
 		Date tstamp = new Date(milliSeconds);
 		return formatter.format(tstamp);
 	}

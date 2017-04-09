@@ -43,6 +43,8 @@ public class TorrentManager extends Thread {
 	static ConcurrentHashMap<Integer, PeerConfig> peersInterestedInMe = new ConcurrentHashMap<Integer, PeerConfig>();
 
 	ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(3);
+	
+	
 
 	public TorrentManager(int peerId, int optimisticUnchoke, int preferredUnchoke, int preferredNeighbor) {
 
@@ -50,7 +52,7 @@ public class TorrentManager extends Thread {
 
 		this.myPeerInfo = ConfigurationReader.getInstance().getPeerInfo().get(myPeerId);
 
-		this.logger = new LoggerUtility(myPeerId);
+		this.logger = LoggerUtility.getInstance(myPeerId);
 
 		this.optimisticUnchokeInterval = optimisticUnchoke;
 
@@ -138,6 +140,7 @@ public class TorrentManager extends Thread {
 					P2PConnectionThread peerThread = new P2PConnectionThread(myPeerInfo, null, acceptedSocket, false);
 					openTCPconnections.add(peerThread);
 					peerThread.start();
+					logger.log("Peer " + myPeerId + " is connected from Peer " + peerThread.getPeerInfo().peerId);
 					expectedConnections--;
 				}
 			}

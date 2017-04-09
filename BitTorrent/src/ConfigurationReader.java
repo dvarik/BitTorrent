@@ -13,7 +13,7 @@ public class ConfigurationReader {
 
 	private HashMap<Integer, PeerConfig> peerProps = new HashMap<Integer, PeerConfig>();
 	private HashMap<String, String> commonProps = new HashMap<String, String>();
-
+	
 	private final String peerInfoFileName = "PeerInfo.cfg";
 	private final String commonFileName = "Common.cfg";
 
@@ -43,6 +43,11 @@ public class ConfigurationReader {
 			}
 
 			br.close();
+			
+			int fileSize = Integer.parseInt(commonProps.get("FileSize"));
+			int pieceSize = Integer.parseInt(commonProps.get("PieceSize"));
+			int numPieces = (int) Math.ceil(fileSize / pieceSize);
+			commonProps.put("numPieces", String.valueOf(numPieces));
 
 			br = new BufferedReader(new InputStreamReader(getClass().getResourceAsStream(peerInfoFileName)));
 
@@ -52,9 +57,11 @@ public class ConfigurationReader {
 				String[] split = line.split(" ");
 				int peerId = Integer.parseInt(split[0]);
 				PeerConfig peer = new PeerConfig(peerId, split[1], Integer.parseInt(split[2]),
-						Integer.parseInt(split[3]));
+						Integer.parseInt(split[3]), numPieces);
 				peerProps.put(peerId, peer);
 			}
+			
+			
 
 			br.close();
 

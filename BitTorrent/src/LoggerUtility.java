@@ -1,4 +1,3 @@
-import java.io.File;
 import java.io.IOException;
 import java.util.logging.ConsoleHandler;
 import java.util.logging.FileHandler;
@@ -12,15 +11,25 @@ public class LoggerUtility {
     
 	private LogFormatter formatTxt;
     
-    private final Logger logger = Logger.getLogger(LoggerUtility.class.getName());
+    private static LoggerUtility instance = null;
     
-	public LoggerUtility(int peerId) {
+    private final Logger logger;
+    
+    public static synchronized LoggerUtility getInstance(int peerId) {
+
+		if (instance == null)
+			instance = new LoggerUtility(peerId);
+
+		return instance;
+	}
+    
+	private LoggerUtility(int peerId) {
+		
+		logger = Logger.getLogger(LoggerUtility.class.getName());
 		
 		//Remove the console handler
         logger.setUseParentHandlers(false);
         
-        //Suppress the logging output to the console - to do
-
         Handler[] handlers = logger.getHandlers();
         if (handlers != null && handlers.length > 0 && handlers[0] instanceof ConsoleHandler) {
                 logger.removeHandler(handlers[0]);
@@ -29,16 +38,9 @@ public class LoggerUtility {
         //Set the logger level to Config
         logger.setLevel(Level.CONFIG);
         
-        //Get the peer directory for which log should be written
-        File peerDirectory = new File("peer_" + peerId);
-        
-        //If the peer directory doesn't exist then make the directory
-        if (!peerDirectory.isDirectory())
-        	peerDirectory.mkdir();
-        
         //Initialize the file handler to the log file inside the peer directory
         try {
-			logFileHandler = new FileHandler(peerDirectory.getPath() + File.separator + "log_peer_" + peerId + ".log");
+			logFileHandler = new FileHandler("log_peer_" + peerId + ".log");
 		} catch (SecurityException e) {
 			e.printStackTrace();
 		} catch (IOException e) {
