@@ -9,8 +9,6 @@ import java.net.Socket;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Random;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
 
 /**
  * @author dvarik
@@ -35,11 +33,11 @@ public class P2PConnectionThread extends Thread {
 
 	private final LoggerUtility logger;
 
-	ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(2);
+	//ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(2);
 
 	private volatile boolean shutdown = false;
 
-	private volatile Object signalChoke, signalUnchoke;
+	//private volatile Object signalChoke, signalUnchoke;
 
 	private final byte[] fileData;
 
@@ -93,13 +91,13 @@ public class P2PConnectionThread extends Thread {
 		return this.peerInfo;
 	}
 
-	public Object getChokeSignal() {
+	/*public Object getChokeSignal() {
 		return this.signalChoke;
 	}
 
 	public Object getUnchokeSignal() {
 		return this.signalUnchoke;
-	}
+	}*/
 
 	private void sendHandshakeMessage() {
 
@@ -153,8 +151,8 @@ public class P2PConnectionThread extends Thread {
 			sendNotInterestedMessage();
 		}
 
-		scheduler.execute(sendChoke);
-		scheduler.execute(sendUnchoke);
+/*		scheduler.execute(sendChoke);
+		scheduler.execute(sendUnchoke);*/
 
 		while(!shutdown){
 
@@ -240,12 +238,10 @@ public class P2PConnectionThread extends Thread {
 							.getPeerInfo();
 					peerList.remove(myInfo).getPeerId();
 
-					//To-do
-					/*for (Integer peerId : peerList.keySet()) {
-						peerList.get(peerId).
-						peerThread.getPeer().sendHaveMsg(pieceI);
-
-					}*/
+					for (Integer peerId : peerList.keySet()) {
+						sendHaveMessage(pieceNum, peerId); // pieceI or pieceNum?
+					}
+					
 					nextPieceNum = getNextBitFieldIndexToRequest();
 					if (nextPieceNum != -1
 							&& TorrentManager.unchokedList.contains(peerInfo)) {
@@ -334,7 +330,7 @@ public class P2PConnectionThread extends Thread {
 
 
 	private int getNextBitFieldIndexToRequest() {
-		// TODO Auto-generated method stub
+		// TODO 
 		return 0;
 	}
 
@@ -398,12 +394,14 @@ public class P2PConnectionThread extends Thread {
 
 	}
 
-	public synchronized void sendHaveMessage(int pieceNum) {
+	private void sendHaveMessage(int pieceNum, int peerId) {
 		byte[] message = MessageUtil.getMessage(MessageUtil.integerToByteArray(pieceNum), MessageType.HAVE);
+		OutputStream o = TorrentManager.messageStreams.get(peerId);
 		try {
-			out.write(message);
-			out.flush();
-
+			synchronized (o) {
+				o.write(message);
+				o.flush();
+			}
 		} catch (IOException e) {
 			System.out.println("Send have message failed! " + e.getMessage());
 			e.printStackTrace();
@@ -563,10 +561,11 @@ public class P2PConnectionThread extends Thread {
 	private void sendChokeMessage() {
 
 		byte[] message = MessageUtil.getMessage(MessageType.CHOKE);
-
 		try {
-			out.write(message);
-			out.flush();
+			synchronized (out) {
+				out.write(message);
+				out.flush();
+			}
 		} catch (IOException e) {
 			logger.log("Send choke failed !! " + e.getMessage());
 			e.printStackTrace();
@@ -577,18 +576,19 @@ public class P2PConnectionThread extends Thread {
 	private void sendUnchokeMessage() {
 
 		byte[] message = MessageUtil.getMessage(MessageType.UNCHOKE);
-
 		try {
-			out.write(message);
-			out.flush();
+			synchronized (out) {
+				out.write(message);
+				out.flush();
+			}
 		} catch (IOException e) {
 			logger.log("Send unchoke failed !! " + e.getMessage());
 			e.printStackTrace();
 		}
 
 	}
-
-	final Runnable sendChoke = new Runnable() {
+	
+	/*final Runnable sendChoke = new Runnable() {
 
 		public void run() {
 
@@ -622,7 +622,7 @@ public class P2PConnectionThread extends Thread {
 			}
 		}
 
-	};
+	};*/
 
 	public void shutDownCleanly() {
 
@@ -637,7 +637,7 @@ public class P2PConnectionThread extends Thread {
 			e.printStackTrace();
 		}
 
-		scheduler.shutdown();
+		//scheduler.shutdown();
 
 	}
 
