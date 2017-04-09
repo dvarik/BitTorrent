@@ -69,7 +69,7 @@ public class TorrentManager extends Thread {
 	public void run() {
 
 		PeerConfig myPeerInfo = ConfigurationReader.getInstance().getPeerInfo().get(myPeerId);
-		
+
 		setFileData();
 
 		establishClientConnections();
@@ -109,8 +109,7 @@ public class TorrentManager extends Thread {
 			}
 		}
 	}
-	
-	
+
 	public void establishClientConnections() {
 
 		HashMap<Integer, PeerConfig> peerMap = ConfigurationReader.getInstance().getPeerInfo();
@@ -169,7 +168,8 @@ public class TorrentManager extends Thread {
 			while (expectedConnections > 0) {
 				Socket acceptedSocket = serverSocket.accept();
 				if (acceptedSocket != null) {
-					P2PConnectionThread peerThread = new P2PConnectionThread(myPeerInfo, null, acceptedSocket, false, fileData);
+					P2PConnectionThread peerThread = new P2PConnectionThread(myPeerInfo, null, acceptedSocket, false,
+							fileData);
 					openTCPconnections.add(peerThread);
 					peerThread.start();
 					logger.log("Peer " + myPeerId + " is connected from Peer " + peerThread.getPeerInfo().peerId);
@@ -198,6 +198,8 @@ public class TorrentManager extends Thread {
 				List<PeerConfig> peers = new ArrayList<PeerConfig>(peersInterestedInMe.values());
 				Collections.sort(peers, new DownloadComparator<PeerConfig>());
 
+				String[] prefList = new String[unchokedList.size()];
+
 				for (PeerConfig peer : peers) {
 					if (count >= preferredNeighborCount) {
 						if (peer.getPeerId() != optimisticallyUnchokedPeer) {
@@ -210,6 +212,7 @@ public class TorrentManager extends Thread {
 
 					} else {
 						unchokedList.add(peer);
+						prefList[count] = String.valueOf(peer.peerId);
 						if (peer.isChoked) {
 							getConnectionByPeerID(peer.peerId).getUnchokeSignal().notify();
 							peersInterestedInMe.get(peer.peerId).isChoked = false;
@@ -219,10 +222,9 @@ public class TorrentManager extends Thread {
 					count++;
 				}
 
+				logger.log("Peer " + myPeerId + " has the preferred neighbors " + String.join(",", prefList));
+				prefList = null;
 			}
-
-			System.out.println(Arrays.toString(unchokedList.toArray()));
-
 		}
 	};
 
@@ -244,7 +246,7 @@ public class TorrentManager extends Thread {
 				}
 
 			}
-			System.out.println(optimisticallyUnchokedPeer);
+			logger.log("Peer " + myPeerId + " has the optimistically unchoked neighbor " + optimisticallyUnchokedPeer);
 
 		}
 	};

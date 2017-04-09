@@ -99,7 +99,7 @@ public class P2PConnectionThread extends Thread {
 		return this.signalUnchoke;
 	}
 
-	public synchronized void sendHandshakeMessage() {
+	private void sendHandshakeMessage() {
 
 		byte[] messageHeader = MessageUtil.getMessageHeader(myInfo.getPeerId());
 
@@ -113,7 +113,7 @@ public class P2PConnectionThread extends Thread {
 
 	}
 
-	public synchronized int receiveHandshakeMessage() {
+	private int receiveHandshakeMessage() {
 
 		try {
 			byte[] b = new byte[32];
