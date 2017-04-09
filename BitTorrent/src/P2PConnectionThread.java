@@ -1,10 +1,13 @@
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Random;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -13,6 +16,9 @@ import java.util.concurrent.ScheduledExecutorService;
  * @author dvarik
  *
  */
+
+
+//To - check if fileData is getting updated in run (PIECE)
 public class P2PConnectionThread extends Thread {
 
 	private final PeerConfig myInfo;
@@ -37,6 +43,11 @@ public class P2PConnectionThread extends Thread {
 
 	private final byte[] fileData;
 
+	private int requestedPieceNum;
+
+	private long requestTime;
+
+
 	public P2PConnectionThread(PeerConfig myPeerI, PeerConfig neighbourPeerI, Socket s, boolean isClient, byte[] data)
 			throws Exception {
 		super();
@@ -44,6 +55,8 @@ public class P2PConnectionThread extends Thread {
 		this.fileData = data;
 		this.isClientConnection = isClient;
 		this.socket = s;
+		this.requestedPieceNum = -1;
+
 
 		try {
 			out = new BufferedOutputStream(socket.getOutputStream());
@@ -126,10 +139,24 @@ public class P2PConnectionThread extends Thread {
 	@Override
 	public void run() {
 
+		sendBitfieldMessage();
+		readNeighbourBitfieldMessage();
+
+		if (isInterested())
+		{
+			System.out.println("Sending interested message to peer");
+			sendInterestedMessage();
+		}
+		else
+		{
+			System.out.println("Sending not interested message to peer");
+			sendNotInterestedMessage();
+		}
+
 		scheduler.execute(sendChoke);
 		scheduler.execute(sendUnchoke);
 
-		while (!shutdown) {
+		while(!shutdown){
 
 			byte[] message = new byte[5];
 
@@ -137,23 +164,163 @@ public class P2PConnectionThread extends Thread {
 				MessageUtil.readMessage(in, message, 5);
 				byte typeVal = message[4];
 				MessageType msgType = MessageType.getType(typeVal);
-
-				switch (msgType) {
+				byte[] myBitfield = myInfo.getBitfield();
+				byte[] pieceIndexData;
+				byte byteData;
+				int pieceNum;
+				int nextPieceNum;
+				switch(msgType) {
 
 				case BITFIELD:
 					break;
 				case HAVE:
+					System.out.println("Received have message from peer id " + peerInfo.getPeerId());
+					pieceIndexData = new byte[4];
+					MessageUtil.readMessage(in, pieceIndexData, 4);
+					pieceNum = MessageUtil.byteArrayToInteger(pieceIndexData);
+					byteData = myBitfield[pieceNum / 8];
+					if ((byteData & (1 << (7 - (pieceNum % 8)))) == 0) {
+						// Send an interested message since don't have this piece.
+						sendInterestedMessage();
+					}
+					updatePeerBitField(pieceNum);
+					logger.log("Peer " + myInfo.getPeerId()
+							+ " received the have message from " + peerInfo.getPeerId());
 					break;
 				case INTERESTED:
+					System.out.println("Received an interested message from peer id " + peerInfo.getPeerId());
+					if(!TorrentManager.peersInterestedInMe.containsKey(peerInfo.getPeerId()))
+					{
+						TorrentManager.peersInterestedInMe.put(peerInfo.getPeerId(), peerInfo);
+					}
+					logger.log("Peer " + myInfo.getPeerId()
+							+ " received the interested message from "
+							+ peerInfo.getPeerId());
+
 					break;
 				case NOT_INTERESTED:
+					System.out.println("Received not interested message from peer id " + peerInfo.getPeerId());
+					TorrentManager.peersInterestedInMe.remove(peerInfo.getPeerId());
+					peerInfo.setIsChoked(true);
+					logger.log("Peer " + myInfo.getPeerId()
+							+ " received the not interested message from "
+							+ peerInfo.getPeerId());
+
 					break;
 				case PIECE:
+					System.out.println("Received piece message from peer id "
+							+ peerInfo.getPeerId());
+					byte[] lenDataArray = new byte[4];
+					for (int i = 0; i < 4; i++) {
+						lenDataArray[i] = message[i];
+					}
+					int messageLen = MessageUtil.byteArrayToInteger(lenDataArray);
+					pieceIndexData = new byte[4];
+					MessageUtil.readMessage(in, pieceIndexData, 4);
+					int pieceDataLen = messageLen - 5;
+					byte[] pieceData = new byte[pieceDataLen];
+					MessageUtil.readMessage(in, pieceData, pieceDataLen);
+					Long downloadTime = System.nanoTime() - requestTime;
+					peerInfo.setDownloadRate((long)(pieceDataLen/downloadTime));
+					pieceNum = MessageUtil.byteArrayToInteger(pieceData);
+					int stdPieceSize = Integer.parseInt(ConfigurationReader.
+							getInstance().getCommonProps().get("PieceSize"));
+					for (int i = 0; i < pieceDataLen; i++) {
+						fileData[pieceNum * stdPieceSize + i] = pieceData[i];
+						//To - check if fileData is getting updated here
+					}
+					logger.log("Peer " + myInfo.getPeerId()
+							+ " has downloaded the piece " + pieceNum + " from "
+							+ peerInfo.getPeerId());
+
+					// send have message to rest of the peers
+					setMyBitfield(pieceNum);
+
+					HashMap<Integer, PeerConfig> peerList = ConfigurationReader.getInstance()
+							.getPeerInfo();
+					peerList.remove(myInfo).getPeerId();
+
+					//To-do
+					/*for (Integer peerId : peerList.keySet()) {
+						peerList.get(peerId).
+						peerThread.getPeer().sendHaveMsg(pieceI);
+
+					}*/
+					nextPieceNum = getNextBitFieldIndexToRequest();
+					if (nextPieceNum != -1
+							&& TorrentManager.unchokedList.contains(peerInfo)) {
+
+						sendRequestMessage(nextPieceNum);
+					}
+
+					if(nextPieceNum == -1 && !(Arrays.equals(myInfo.getBitfield(), peerInfo.getBitfield())))
+					{
+						sendInterestedMessage();
+					}
+
+					else if(nextPieceNum == -1 && Arrays.equals(myInfo.getBitfield(),PeerConfig.globalBitfield))
+					{
+						File file = new File(ConfigurationReader.getInstance().getCommonProps()
+								.get("FileName"));
+						try (FileOutputStream fileOutputStream = new FileOutputStream(file)) {
+							fileOutputStream.write(fileData);
+						} catch (IOException e) {
+							e.printStackTrace();
+						}
+
+					}
+					else if(nextPieceNum == -1){
+						sendNotInterestedMessage();
+					}
+
+
 					break;
 				case REQUEST:
+					System.out.println("Received request message from peer id "
+							+ peerInfo.getPeerId());
+					byte[] data = new byte[4];
+					in.read(data);
+					pieceNum = MessageUtil.byteArrayToInteger(data);
+					if (!peerInfo.getIsChoked()) {
+						System.out.println("Requested piece message of piece number " + pieceNum);
+						sendPieceMessage(pieceNum);
+					}
+					break;
+				case CHOKE:
+					System.out.println("Received choke message from peer id " + peerInfo.getPeerId());
+
+					byteData = myBitfield[requestedPieceNum / 8];
+
+					if ((byteData & (1 << (7 - (requestedPieceNum % 8)))) == 0) {
+						// I don't have this piece
+						resetPieceIndexRequested(requestedPieceNum / 8,
+								requestedPieceNum % 8);
+					}
+
+					TorrentManager.chokedList.add(peerInfo);
+					logger.log("Peer " + myInfo.getPeerId() + " is choked by "
+							+ peerInfo.getPeerId());
 					break;
 				case UNCHOKE:
+					System.out.println("Received unchoke message from peer id " + peerInfo.getPeerId());
+					TorrentManager.chokedList.remove(peerInfo.getPeerId());
+					logger.log("Peer " + myInfo.getPeerId() + " is unchoked by "
+							+ peerInfo.getPeerId());
+					nextPieceNum = getNextToBeRequestedPiece();
+					if (nextPieceNum != -1) {
+						sendRequestMessage(nextPieceNum);
+					}
+
+					if(nextPieceNum == -1 && !(Arrays.equals(myInfo.getBitfield(), peerInfo.getBitfield())))
+					{
+						sendInterestedMessage();
+					}
+
+					else if(nextPieceNum == -1){
+						sendNotInterestedMessage();
+					}
 					break;
+
 				default:
 					break;
 
@@ -162,9 +329,13 @@ public class P2PConnectionThread extends Thread {
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
-
 		}
+	}
 
+
+	private int getNextBitFieldIndexToRequest() {
+		// TODO Auto-generated method stub
+		return 0;
 	}
 
 	private void sendBitfieldMessage() {
@@ -247,6 +418,7 @@ public class P2PConnectionThread extends Thread {
 			try {
 				out.write(message);
 				out.flush();
+				requestTime = System.nanoTime();
 			} catch (IOException e) {
 				System.out.println("io exception in reading " + e.getMessage());
 				e.printStackTrace();
@@ -267,7 +439,7 @@ public class P2PConnectionThread extends Thread {
 		// if pieceSize is greater than the entire file left
 
 		byte[] data = new byte[1 + 4 + endIndex - startIndex]; // 4 is for
-																// pieceIndex
+		// pieceIndex
 
 		// write the piece index
 		byte[] pieceIndexByteArray = MessageUtil.integerToByteArray(pieceNum);
@@ -295,9 +467,9 @@ public class P2PConnectionThread extends Thread {
 		}
 	}
 
-	private void resetPieceIndexRequested(int index, int indexFromLeft) {
+	private void resetPieceIndexRequested(int byteIndex, int bitIndex) {
 		byte[] bitFieldRequested = myInfo.getAllRequestedBits();
-		bitFieldRequested[index] &= ~(1 << (7 - indexFromLeft));
+		bitFieldRequested[byteIndex] &= ~(1 << (7 - bitIndex));
 		myInfo.setAllRequestedBits(bitFieldRequested);
 	}
 
@@ -306,10 +478,11 @@ public class P2PConnectionThread extends Thread {
 		byte[] myBitfield = myInfo.getBitfield();
 		byte[] myPeerBitfield = peerInfo.getBitfield();
 		byte[] needToRequest = new byte[allRequestedBits.length];
+		byte[] requestedAndHave = new byte[allRequestedBits.length];
 
 		for (int i = 0; i < allRequestedBits.length; i++) {
-			byte requestedAndHave = (byte) (myBitfield[i] | allRequestedBits[i]);
-			needToRequest[i] = (byte) ((requestedAndHave ^ myPeerBitfield[i]) & ~requestedAndHave);
+			requestedAndHave[i] = (byte) (myBitfield[i] | allRequestedBits[i]);
+			needToRequest[i] = (byte) ((requestedAndHave[i] ^ myPeerBitfield[i]) & ~requestedAndHave[i]);
 		}
 
 		int numPieces = Integer.parseInt(ConfigurationReader.getInstance().getCommonProps().get("numPieces"));
@@ -320,6 +493,15 @@ public class P2PConnectionThread extends Thread {
 		int bitIndex = randNum % 8;
 
 		byte temp = needToRequest[byteIndex];
+		byte[] zerosByteArray = new byte[allRequestedBits.length];
+		Arrays.fill(zerosByteArray, (byte) 0);
+
+		if (Arrays.equals(needToRequest, zerosByteArray))
+		{
+			requestedPieceNum = -1;
+			return -1;
+		}
+
 		while (temp == 0 || (temp & (1 << bitIndex)) == 0) {
 			randNum = rand.nextInt(numPieces - 1) + 1;
 			byteIndex = randNum / 8;
@@ -327,11 +509,13 @@ public class P2PConnectionThread extends Thread {
 			temp = needToRequest[byteIndex];
 		}
 
+		requestedPieceNum = randNum;
 		allRequestedBits[byteIndex] |= (1 << bitIndex);
 		myInfo.setAllRequestedBits(allRequestedBits);
 		return randNum;
 
 	}
+
 
 	private boolean isInterested() {
 
@@ -406,7 +590,6 @@ public class P2PConnectionThread extends Thread {
 
 	final Runnable sendChoke = new Runnable() {
 
-		@Override
 		public void run() {
 
 			while (true) {
@@ -425,7 +608,6 @@ public class P2PConnectionThread extends Thread {
 
 	final Runnable sendUnchoke = new Runnable() {
 
-		@Override
 		public void run() {
 
 			while (true) {
@@ -460,3 +642,4 @@ public class P2PConnectionThread extends Thread {
 	}
 
 }
+
