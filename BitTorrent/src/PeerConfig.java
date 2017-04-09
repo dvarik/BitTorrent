@@ -11,7 +11,8 @@ public class PeerConfig {
 	int port;
 	int hasFile;
 	byte[] bitfield;
-	boolean isChoked = true;
+	byte[] allRequestedBits;
+	boolean isChoked;
 	long downloadRate;
 
 	public PeerConfig(int peerId, String hostName, int port, int hasFile, int numPieces) {
@@ -21,8 +22,13 @@ public class PeerConfig {
 		this.hostName = hostName;
 		this.port = port;
 		this.hasFile = hasFile;
+		this.isChoked = true;
 
 		bitfield = new byte[(int) Math.ceil(numPieces / 8)];
+		Arrays.fill(bitfield, (byte) 0);
+
+		allRequestedBits = new byte[(int) Math.ceil(numPieces / 8)];
+		Arrays.fill(allRequestedBits, (byte) 0);
 
 		if (this.hasFile == 1) {
 			if (numPieces % 8 == 0) {
@@ -36,8 +42,6 @@ public class PeerConfig {
 					numLastByteSetBits--;
 				}
 			}
-		} else {
-			Arrays.fill(bitfield, (byte) 0);
 		}
 	}
 
@@ -73,12 +77,28 @@ public class PeerConfig {
 		this.hasFile = hasFile;
 	}
 
+	public byte[] getBitfield() {
+		return bitfield;
+	}
+
 	public void setBitfield(byte[] bf) {
 		this.bitfield = bf;
 	}
 
-	public byte[] getBitfield() {
-		return bitfield;
+	public byte[] getAllRequestedBits() {
+		return this.allRequestedBits;
+	}
+
+	public void setAllRequestedBits(byte[] bf) {
+		this.allRequestedBits = bf;
+	}
+
+	public boolean getIsChoked() {
+		return isChoked;
+	}
+
+	public void setIsChoked(boolean flag) {
+		this.isChoked = flag;
 	}
 
 }

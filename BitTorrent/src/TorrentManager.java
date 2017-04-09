@@ -1,3 +1,6 @@
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.ConnectException;
 import java.net.ServerSocket;
@@ -36,6 +39,8 @@ public class TorrentManager extends Thread {
 
 	static volatile int optimisticallyUnchokedPeer = -1;
 
+	private byte[] fileData = null;
+
 	static List<PeerConfig> unchokedList = Collections.synchronizedList(new ArrayList<PeerConfig>());
 
 	static List<PeerConfig> chokedList = Collections.synchronizedList(new ArrayList<PeerConfig>());
@@ -43,8 +48,6 @@ public class TorrentManager extends Thread {
 	static ConcurrentHashMap<Integer, PeerConfig> peersInterestedInMe = new ConcurrentHashMap<Integer, PeerConfig>();
 
 	ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(3);
-	
-	
 
 	public TorrentManager(int peerId, int optimisticUnchoke, int preferredUnchoke, int preferredNeighbor) {
 
@@ -66,6 +69,8 @@ public class TorrentManager extends Thread {
 	public void run() {
 
 		PeerConfig myPeerInfo = ConfigurationReader.getInstance().getPeerInfo().get(myPeerId);
+		
+		setFileData();
 
 		establishClientConnections();
 
@@ -75,10 +80,37 @@ public class TorrentManager extends Thread {
 
 		scheduler.scheduleAtFixedRate(findOptimisticallyUnchokedNeighbour, 0, optimisticUnchokeInterval,
 				TimeUnit.SECONDS);
-		
+
 		scheduler.scheduleAtFixedRate(shutdownTorrent, 3, 5, TimeUnit.SECONDS);
 	}
 
+	public void setFileData() {
+
+		String fileName = ConfigurationReader.getInstance().getCommonProps().get("FileName");
+		Integer fileSize = Integer.parseInt(ConfigurationReader.getInstance().getCommonProps().get("FileSize"));
+		fileData = new byte[fileSize];
+		File file = new File(fileName);
+
+		if (file.exists()) {
+			if (file.length() != fileSize) {
+				System.out.println("File size discrepancy.");
+				Thread.currentThread().interrupt();
+			} else {
+				try {
+					FileInputStream fileInputStream = new FileInputStream(file);
+					fileInputStream.read(fileData);
+					fileInputStream.close();
+				} catch (FileNotFoundException e) {
+					e.printStackTrace();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+
+			}
+		}
+	}
+	
+	
 	public void establishClientConnections() {
 
 		HashMap<Integer, PeerConfig> peerMap = ConfigurationReader.getInstance().getPeerInfo();
@@ -92,7 +124,7 @@ public class TorrentManager extends Thread {
 				try {
 					// create a socket to connect to the peer
 					P2PConnectionThread p = new P2PConnectionThread(myPeerInfo, currPeerInfo,
-							new Socket(currPeerInfo.hostName, currPeerInfo.port), true);
+							new Socket(currPeerInfo.hostName, currPeerInfo.port), true, fileData);
 
 					logger.log("Peer " + myPeerId + " makes a connection to Peer " + currPeerId);
 
@@ -137,7 +169,7 @@ public class TorrentManager extends Thread {
 			while (expectedConnections > 0) {
 				Socket acceptedSocket = serverSocket.accept();
 				if (acceptedSocket != null) {
-					P2PConnectionThread peerThread = new P2PConnectionThread(myPeerInfo, null, acceptedSocket, false);
+					P2PConnectionThread peerThread = new P2PConnectionThread(myPeerInfo, null, acceptedSocket, false, fileData);
 					openTCPconnections.add(peerThread);
 					peerThread.start();
 					logger.log("Peer " + myPeerId + " is connected from Peer " + peerThread.getPeerInfo().peerId);
@@ -151,10 +183,6 @@ public class TorrentManager extends Thread {
 		}
 
 	}
-
-	/*
-	 * below 3 methods need to be implemented as scheduled tasks
-	 */
 
 	final Runnable findPreferredNeighbour = new Runnable() {
 
