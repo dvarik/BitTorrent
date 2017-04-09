@@ -11,17 +11,24 @@ public class PeerConfig {
 	int port;
 	int hasFile;
 	byte[] bitfield;
-	boolean isChoked = true;
+	byte[] allRequestedBits;
+	boolean isChoked;
 	long downloadRate;
 
-	public PeerConfig(int peerId, String hostName, int port, int hasFile) {
+	public PeerConfig(int peerId, String hostName, int port, int hasFile) 
+	{
 		super();
 		
 		this.peerId = peerId;
 		this.hostName = hostName;
 		this.port = port;
 		this.hasFile = hasFile;
+		this.isChoked = true;
 		int numPieces = MessageUtil.getNumPieces();
+		bitfield = new byte[(int) Math.ceil(numPieces/8)];
+		Arrays.fill(bitfield, (byte)0);
+		allRequestedBits = new byte[(int) Math.ceil(numPieces/8)];
+		Arrays.fill(allRequestedBits, (byte)0);
 		
 		if(this.hasFile == 1)
 		{
@@ -41,53 +48,76 @@ public class PeerConfig {
 	            }
 			}			
 		}
-		else
-		{
-			bitfield = new byte[(int) Math.ceil(numPieces/8)];
-			Arrays.fill(bitfield, (byte)0);
-		}
 	}
 
 	
-	public int getPeerId() {
+	public int getPeerId() 
+	{
 		return peerId;
 	}
 
-	public void setPeerId(int peerId) {
+	public void setPeerId(int peerId) 
+	{
 		this.peerId = peerId;
 	}
 
-	public String getHostName() {
+	public String getHostName() 
+	{
 		return hostName;
 	}
 
-	public void setHostName(String hostName) {
+	public void setHostName(String hostName) 
+	{
 		this.hostName = hostName;
 	}
 
-	public int getPort() {
+	public int getPort() 
+	{
 		return port;
 	}
 
-	public void setPort(int port) {
+	public void setPort(int port) 
+	{
 		this.port = port;
 	}
 
-	public int getHasFile() {
+	public int getHasFile() 
+	{
 		return hasFile;
 	}
 
-	public void setHasFile(int hasFile) {
+	public void setHasFile(int hasFile) 
+	{
 		this.hasFile = hasFile;
 	}
 
+	
+	public byte[] getBitfield() {
+		return bitfield;
+	}
+	
 	public void setBitfield(byte[] bf)
 	{
 		this.bitfield = bf;
 	}
 	
-	public byte[] getBitfield() {
-		return bitfield;
+	public byte[] getAllRequestedBits() {
+		return this.allRequestedBits;
+	}
+	
+	public void setAllRequestedBits(byte[] bf)
+	{
+		this.allRequestedBits = bf;
+	}
+	
+	public boolean getIsChoked()
+	{
+		return isChoked;
+	}
+	
+	public void setIsChoked(boolean flag)
+	{
+		this.isChoked = flag;
 	}
 
 }
