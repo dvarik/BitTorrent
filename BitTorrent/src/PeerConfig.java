@@ -27,6 +27,8 @@ public class PeerConfig {
 
 		bitfield = new byte[(int) Math.ceil(numPieces / 8.0d)];
 		Arrays.fill(bitfield, (byte) 0);
+		System.out.println("Bitfield length is " + bitfield.length);
+		System.out.println("numpieces:" + numPieces);
 		allRequestedBits = new byte[(int) Math.ceil(numPieces / 8.0d)];
 		Arrays.fill(allRequestedBits, (byte) 0);
 

@@ -100,6 +100,7 @@ public class MessageUtil {
 		while (len != 0) {
 			int dataAvailableLength = in.available();
 			int read = Math.min(len, dataAvailableLength);
+			//System.out.println("size read " +  read);
 			byte[] dataRead = new byte[read];
 			if (read != 0) {
 				in.read(dataRead);
