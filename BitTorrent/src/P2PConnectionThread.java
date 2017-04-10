@@ -136,25 +136,8 @@ public class P2PConnectionThread extends Thread {
 	public void run() {
 
 		sendBitfieldMessage();
-		byte[] message = new byte[5];
-		while (true)
-		{
-
-			try {
-				MessageUtil.readMessage(in, message, 5);
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-			byte typeVal = message[4];
-			MessageType msgType = MessageType.getType(typeVal);
-			System.out.println(msgType);
-			if (msgType == MessageType.BITFIELD)
-				break;
-
-		}
-
-		readNeighbourBitfieldMessage(message);
+		readNeighbourBitfieldMessage();
+		
 		if (isInterested())
 		{
 			System.out.println("Sending interested message to peer");
@@ -171,8 +154,8 @@ public class P2PConnectionThread extends Thread {
 		while(!shutdown){
 
 			try {
-				message = new byte[5];
-				MessageUtil.readMessage(in, message, 5);
+				byte[] message = new byte[5];
+				in.read(message);
 				byte typeVal = message[4];
 				MessageType msgType = MessageType.getType(typeVal);
 				System.out.println("Message read is " +Arrays.toString(message));
@@ -348,11 +331,7 @@ public class P2PConnectionThread extends Thread {
 	private synchronized void sendBitfieldMessage() {
 		try {
 			byte[] myBitfield = myInfo.getBitfield();
-			System.out.println("Bitfield is " + Arrays.toString(myBitfield));
 			byte[] message = MessageUtil.getMessage(myBitfield, MessageType.BITFIELD);
-			System.out.println((int)message[5]);
-			System.out.println("Message is "  + Arrays.toString(message));
-
 			out.write(message);
 			out.flush();
 			System.out.println("Message sent");
@@ -362,22 +341,17 @@ public class P2PConnectionThread extends Thread {
 		}
 	}
 
-	private synchronized void readNeighbourBitfieldMessage(byte[] message) {
+	private synchronized void readNeighbourBitfieldMessage() {
 		try {
-			byte[] bitfield = null;
-			byte[] msgLenArr = new byte[4];
-			for (int i=0; i<4;i++)
-			{
-				msgLenArr[i] = message[i];
-			}
-
-			int tempDataLength = MessageUtil.byteArrayToInteger(msgLenArr);
+			byte[] message = new byte[myInfo.bitfield.length + 5];
+			in.read(message);
+			System.out.println("bitfield rcvd:" + Arrays.toString(message));
 			// read msg type
-			System.out.println((int)(message[4]));
 			if (message[4] == MessageType.BITFIELD.value) {
+				int tempDataLength = MessageUtil.byteArrayToInteger(Arrays.copyOf(message, 4));
 				int dataLength = tempDataLength - 1;
-				bitfield = new byte[dataLength];
-				MessageUtil.readMessage(in, bitfield, dataLength);
+				byte[] bitfield = new byte[dataLength];
+				bitfield = Arrays.copyOfRange(message, 5, message.length);
 				peerInfo.setBitfield(bitfield);
 			} else {
 				System.out.println("Wrong message type sent");
