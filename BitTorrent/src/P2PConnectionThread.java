@@ -172,7 +172,8 @@ public class P2PConnectionThread extends Thread {
 				case HAVE:
 					System.out.println("Received have message from peer id " + peerInfo.getPeerId());
 					pieceIndexData = new byte[4];
-					MessageUtil.readMessage(in, pieceIndexData, 4);
+					in.read(pieceIndexData);
+					//MessageUtil.readMessage(in, pieceIndexData, 4);
 					pieceNum = MessageUtil.byteArrayToInteger(pieceIndexData);
 					byteData = myBitfield[pieceNum / 8];
 					if ((byteData & (1 << (7 - (pieceNum % 8)))) == 0) {
@@ -211,10 +212,12 @@ public class P2PConnectionThread extends Thread {
 					}
 					int messageLen = MessageUtil.byteArrayToInteger(lenDataArray);
 					pieceIndexData = new byte[4];
-					MessageUtil.readMessage(in, pieceIndexData, 4);
+					//MessageUtil.readMessage(in, pieceIndexData, 4);
+					in.read(pieceIndexData);
 					int pieceDataLen = messageLen - 5;
 					byte[] pieceData = new byte[pieceDataLen];
-					MessageUtil.readMessage(in, pieceData, pieceDataLen);
+					//MessageUtil.readMessage(in, pieceData, pieceDataLen);
+					in.read(pieceData);
 					Long downloadTime = System.nanoTime() - requestTime;
 					peerInfo.setDownloadRate((long)(pieceDataLen/downloadTime));
 					pieceNum = MessageUtil.byteArrayToInteger(pieceData);
@@ -233,20 +236,20 @@ public class P2PConnectionThread extends Thread {
 
 					HashMap<Integer, PeerConfig> peerList = ConfigurationReader.getInstance()
 							.getPeerInfo();
-					peerList.remove(myInfo).getPeerId();
+					peerList.remove(myInfo.peerId);
 
 					for (Integer peerId : peerList.keySet()) {
+						System.out.println("Sending have message to peer:" + peerId);
 						sendHaveMessage(pieceNum, peerId);
 					}
 
 					nextPieceNum = getNextToBeRequestedPiece();
 					if (nextPieceNum != -1
 							&& TorrentManager.unchokedList.contains(peerInfo)) {
-
 						sendRequestMessage(nextPieceNum);
 					}
 
-					byte[] empty = new byte[3];
+					byte[] empty = new byte[myInfo.bitfield.length];
 					String fullBitField = Arrays.toString(empty);
 					fullBitField = fullBitField.replaceAll("0", "1");
 
@@ -424,7 +427,7 @@ public class P2PConnectionThread extends Thread {
 		// special case
 		// if pieceSize is greater than the entire file left
 
-		byte[] data = new byte[1 + 4 + endIndex - startIndex]; // 4 is for
+		byte[] data = new byte[1 + 4 + endIndex - startIndex + 1]; // 4 is for
 		// pieceIndex
 
 		// write the piece index
@@ -439,8 +442,8 @@ public class P2PConnectionThread extends Thread {
 		i++;
 
 		// write the piece data
-		for (; i <= endIndex; i++) {
-			data[i] = fileData[i];
+		for (; startIndex <= endIndex; i++) {
+			data[i] = fileData[startIndex++];
 		}
 
 		try {

@@ -204,7 +204,7 @@ public class TorrentManager extends Thread {
 				List<PeerConfig> peers = new ArrayList<PeerConfig>(peersInterestedInMe.values());
 				Collections.sort(peers, new DownloadComparator<PeerConfig>());
 
-				String[] prefList = new String[unchokedList.size()];
+				String[] prefList = new String[preferredNeighborCount];
 
 				for (PeerConfig peer : peers) {
 					if (count >= preferredNeighborCount) {
