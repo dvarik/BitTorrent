@@ -194,8 +194,9 @@ public class TorrentManager extends Thread {
 		@Override
 		public void run() {
 
-			if (peersInterestedInMe != null) {
+			if (!peersInterestedInMe.isEmpty()) {
 
+				System.out.println("Interested size:" + peersInterestedInMe.size());
 				unchokedList.clear();
 				chokedList.clear();
 				int count = 0;

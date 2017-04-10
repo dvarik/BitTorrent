@@ -97,7 +97,7 @@ public class P2PConnectionThread extends Thread {
 		return this.signalUnchoke;
 	}*/
 
-	private void sendHandshakeMessage() {
+	private synchronized void sendHandshakeMessage() {
 
 		byte[] messageHeader = MessageUtil.getMessageHeader(myInfo.getPeerId());
 
@@ -111,7 +111,7 @@ public class P2PConnectionThread extends Thread {
 
 	}
 
-	private int receiveHandshakeMessage() {
+	private synchronized int receiveHandshakeMessage() {
 
 		try {
 			byte[] b = new byte[32];
@@ -136,30 +136,21 @@ public class P2PConnectionThread extends Thread {
 	public void run() {
 
 		sendBitfieldMessage();
-		readNeighbourBitfieldMessage();
-
-		if (isInterested())
-		{
-			System.out.println("Sending interested message to peer");
-			sendInterestedMessage();
-		}
-		else
-		{
-			System.out.println("Sending not interested message to peer");
-			sendNotInterestedMessage();
-		}
 
 /*		scheduler.execute(sendChoke);
 		scheduler.execute(sendUnchoke);*/
 
 		while(!shutdown){
 
-			byte[] message = new byte[5];
-
 			try {
+				byte[] message = new byte[5];
 				MessageUtil.readMessage(in, message, 5);
 				byte typeVal = message[4];
 				MessageType msgType = MessageType.getType(typeVal);
+				System.out.println(MessageUtil.byteArrayToInteger(message));
+				System.out.println("typeval:" + (int) typeVal);
+				System.out.println("msgtype:" + (int) msgType.getValue());
+				
 				byte[] myBitfield = myInfo.getBitfield();
 				byte[] pieceIndexData;
 				byte byteData;
@@ -168,6 +159,18 @@ public class P2PConnectionThread extends Thread {
 				switch(msgType) {
 
 				case BITFIELD:
+					readNeighbourBitfieldMessage();
+
+					if (isInterested())
+					{
+						System.out.println("Sending interested message to peer");
+						sendInterestedMessage();
+					}
+					else
+					{
+						System.out.println("Sending not interested message to peer");
+						sendNotInterestedMessage();
+					}
 					break;
 				case HAVE:
 					System.out.println("Received have message from peer id " + peerInfo.getPeerId());
@@ -197,11 +200,10 @@ public class P2PConnectionThread extends Thread {
 				case NOT_INTERESTED:
 					System.out.println("Received not interested message from peer id " + peerInfo.getPeerId());
 					TorrentManager.peersInterestedInMe.remove(peerInfo.getPeerId());
-					peerInfo.setIsChoked(true);
+					//peerInfo.setIsChoked(true);
 					logger.log("Peer " + myInfo.getPeerId()
 							+ " received the not interested message from "
 							+ peerInfo.getPeerId());
-
 					break;
 				case PIECE:
 					System.out.println("Received piece message from peer id "
@@ -294,13 +296,13 @@ public class P2PConnectionThread extends Thread {
 								requestedPieceNum % 8);
 					}
 
-					TorrentManager.chokedList.add(peerInfo);
+					//TorrentManager.chokedList.add(peerInfo);
 					logger.log("Peer " + myInfo.getPeerId() + " is choked by "
 							+ peerInfo.getPeerId());
 					break;
 				case UNCHOKE:
 					System.out.println("Received unchoke message from peer id " + peerInfo.getPeerId());
-					TorrentManager.chokedList.remove(peerInfo.getPeerId());
+					//TorrentManager.chokedList.remove(peerInfo.getPeerId());
 					logger.log("Peer " + myInfo.getPeerId() + " is unchoked by "
 							+ peerInfo.getPeerId());
 					nextPieceNum = getNextToBeRequestedPiece();
@@ -329,10 +331,12 @@ public class P2PConnectionThread extends Thread {
 		}
 	}
 
-	private void sendBitfieldMessage() {
+	private synchronized void sendBitfieldMessage() {
 		try {
 			byte[] myBitfield = myInfo.getBitfield();
 			byte[] message = MessageUtil.getMessage(myBitfield, MessageType.BITFIELD);
+			System.out.println("send bf:"+ (int)message[4]);
+			System.out.println("send msg:"+ Arrays.toString(message));
 			out.write(message);
 			out.flush();
 		} catch (IOException e) {
@@ -341,7 +345,7 @@ public class P2PConnectionThread extends Thread {
 		}
 	}
 
-	private void readNeighbourBitfieldMessage() {
+	private synchronized void readNeighbourBitfieldMessage() {
 		try {
 			byte[] bitfield = null;
 			byte[] msgLenArr = new byte[4];
@@ -350,6 +354,7 @@ public class P2PConnectionThread extends Thread {
 			// read msg type
 			byte[] msgType = new byte[1];
 			MessageUtil.readMessage(in,msgType,1);
+			System.out.println((int)(msgType[0]));
 			if (msgType[0] == MessageType.BITFIELD.value) {
 				int dataLength = tempDataLength - 1;
 				bitfield = new byte[dataLength];
@@ -382,7 +387,6 @@ public class P2PConnectionThread extends Thread {
 		byte[] peerBitfield = peerInfo.getBitfield();
 		peerBitfield[pieceNum / 8] |= (1 << byteIndex);
 		peerInfo.setBitfield(peerBitfield);
-		System.out.println("update:" + peerBitfield.length);
 	}
 
 	private void sendHaveMessage(int pieceNum, int peerId) {

@@ -22,7 +22,7 @@ public class MessageUtil {
 	}
 
 	public static byte[] getMessage(final byte[] payload, final MessageType mType) {
-		byte[] msgLength = integerToByteArray(payload.length);
+		byte[] msgLength = integerToByteArray(payload.length + 1);
 		byte[] temp = concat(msgLength, mType.value);
 		return concat(temp, payload);
 	}
