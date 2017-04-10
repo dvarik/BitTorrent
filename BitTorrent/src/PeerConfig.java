@@ -12,7 +12,6 @@ public class PeerConfig {
 	int hasFile;
 	byte[] bitfield;
 	byte[] allRequestedBits;
-	static byte[] globalBitfield;
 	boolean isChoked;
 	long downloadRate;
 
@@ -26,21 +25,18 @@ public class PeerConfig {
 		this.hasFile = hasFile;
 		this.isChoked = true;
 
-		bitfield = new byte[(int) Math.ceil(numPieces / 8)];
-		globalBitfield = new byte[(int) Math.ceil(numPieces / 8)];
-		initializeBitfield(numPieces,globalBitfield);
-
+		bitfield = new byte[(int) Math.ceil(numPieces / 8.0f)];
 		Arrays.fill(bitfield, (byte) 0);
 
-		allRequestedBits = new byte[(int) Math.ceil(numPieces / 8)];
+		allRequestedBits = new byte[(int) Math.ceil(numPieces / 8.0f)];
 		Arrays.fill(allRequestedBits, (byte) 0);
 
 		if (this.hasFile == 1) {
-			initializeBitfield(numPieces, bitfield);
+			initializeBitfield(numPieces);
 		}
 	}
 
-	public void initializeBitfield(int numPieces, byte[] bitfield)
+	private void initializeBitfield(int numPieces)
 	{
 		if (numPieces % 8 == 0) {
 			Arrays.fill(bitfield, (byte) 255);

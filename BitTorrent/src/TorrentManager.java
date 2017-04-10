@@ -111,6 +111,7 @@ public class TorrentManager extends Thread {
 
 			}
 		}
+		
 	}
 
 	public void establishClientConnections() {

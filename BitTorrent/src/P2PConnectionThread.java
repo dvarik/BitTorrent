@@ -15,8 +15,6 @@ import java.util.Random;
  *
  */
 
-
-//To - check if fileData is getting updated in run (PIECE)
 public class P2PConnectionThread extends Thread {
 
 	private final PeerConfig myInfo;
@@ -239,22 +237,25 @@ public class P2PConnectionThread extends Thread {
 					peerList.remove(myInfo).getPeerId();
 
 					for (Integer peerId : peerList.keySet()) {
-						sendHaveMessage(pieceNum, peerId); // pieceI or pieceNum?
+						sendHaveMessage(pieceNum, peerId);
 					}
 					
-					nextPieceNum = getNextBitFieldIndexToRequest();
+					nextPieceNum = getNextToBeRequestedPiece();
 					if (nextPieceNum != -1
 							&& TorrentManager.unchokedList.contains(peerInfo)) {
 
 						sendRequestMessage(nextPieceNum);
 					}
 
+					byte[] empty = new byte[3];
+					String fullBitField = Arrays.toString(empty);
+					fullBitField = fullBitField.replaceAll("0", "1");
+					
 					if(nextPieceNum == -1 && !(Arrays.equals(myInfo.getBitfield(), peerInfo.getBitfield())))
 					{
 						sendInterestedMessage();
 					}
-
-					else if(nextPieceNum == -1 && Arrays.equals(myInfo.getBitfield(),PeerConfig.globalBitfield))
+					else if(nextPieceNum == -1 && Arrays.toString(myInfo.getBitfield()).equals(fullBitField))
 					{
 						File file = new File(ConfigurationReader.getInstance().getCommonProps()
 								.get("FileName"));
@@ -328,12 +329,6 @@ public class P2PConnectionThread extends Thread {
 		}
 	}
 
-
-	private int getNextBitFieldIndexToRequest() {
-		// TODO 
-		return 0;
-	}
-
 	private void sendBitfieldMessage() {
 		try {
 			byte[] myBitfield = myInfo.getBitfield();
@@ -369,7 +364,6 @@ public class P2PConnectionThread extends Thread {
 
 		} catch (IOException e) {
 			System.out.println("Could not read length of actual message");
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 
@@ -558,36 +552,6 @@ public class P2PConnectionThread extends Thread {
 
 	}
 
-	private void sendChokeMessage() {
-
-		byte[] message = MessageUtil.getMessage(MessageType.CHOKE);
-		try {
-			synchronized (out) {
-				out.write(message);
-				out.flush();
-			}
-		} catch (IOException e) {
-			logger.log("Send choke failed !! " + e.getMessage());
-			e.printStackTrace();
-		}
-
-	}
-
-	private void sendUnchokeMessage() {
-
-		byte[] message = MessageUtil.getMessage(MessageType.UNCHOKE);
-		try {
-			synchronized (out) {
-				out.write(message);
-				out.flush();
-			}
-		} catch (IOException e) {
-			logger.log("Send unchoke failed !! " + e.getMessage());
-			e.printStackTrace();
-		}
-
-	}
-	
 	/*final Runnable sendChoke = new Runnable() {
 
 		public void run() {
