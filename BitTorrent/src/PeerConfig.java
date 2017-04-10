@@ -25,10 +25,10 @@ public class PeerConfig {
 		this.hasFile = hasFile;
 		this.isChoked = true;
 
-		bitfield = new byte[(int) Math.ceil(numPieces / 8.0f)];
+		bitfield = new byte[(int) Math.ceil(numPieces / 8.0d)];
 		Arrays.fill(bitfield, (byte) 0);
-
-		allRequestedBits = new byte[(int) Math.ceil(numPieces / 8.0f)];
+		System.out.println(Math.ceil(numPieces / 8.0d));
+		allRequestedBits = new byte[(int) Math.ceil(numPieces / 8.0d)];
 		Arrays.fill(allRequestedBits, (byte) 0);
 
 		if (this.hasFile == 1) {
