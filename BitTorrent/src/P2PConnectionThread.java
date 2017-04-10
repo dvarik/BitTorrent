@@ -345,14 +345,11 @@ public class P2PConnectionThread extends Thread {
 		try {
 			byte[] bitfield = null;
 			byte[] msgLenArr = new byte[4];
-			int msgLen = in.read(msgLenArr);
-			if (msgLen != 4) {
-				System.out.println("Message length is incorrect!");
-			}
+			MessageUtil.readMessage(in,msgLenArr,4);
 			int tempDataLength = MessageUtil.byteArrayToInteger(msgLenArr);
 			// read msg type
 			byte[] msgType = new byte[1];
-			in.read(msgType);
+			MessageUtil.readMessage(in,msgType,1);
 			if (msgType[0] == MessageType.BITFIELD.value) {
 				int dataLength = tempDataLength - 1;
 				bitfield = new byte[dataLength];
@@ -385,7 +382,7 @@ public class P2PConnectionThread extends Thread {
 		byte[] peerBitfield = peerInfo.getBitfield();
 		peerBitfield[pieceNum / 8] |= (1 << byteIndex);
 		peerInfo.setBitfield(peerBitfield);
-
+		System.out.println("update:" + peerBitfield.length);
 	}
 
 	private void sendHaveMessage(int pieceNum, int peerId) {
@@ -514,6 +511,9 @@ public class P2PConnectionThread extends Thread {
 		byte[] myBitfield = myInfo.getBitfield();
 		byte[] peerBitfield = peerInfo.getBitfield();
 
+		System.out.println("peerbitfield:" + peerBitfield.length);
+		System.out.println("bitfield:" + myBitfield.length);
+		
 		for (int i = 0; i < myBitfield.length; i++) {
 			byte temp = (byte) (myBitfield[i] ^ peerBitfield[i]);
 			byte result = (byte) (temp & ~myBitfield[i]);
