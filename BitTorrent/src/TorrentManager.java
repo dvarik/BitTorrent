@@ -95,6 +95,7 @@ public class TorrentManager extends Thread {
 		File file = new File(fileName);
 
 		if (file.exists()) {
+			//System.out.println(file.length());
 			if (file.length() != fileSize) {
 				System.out.println("File size discrepancy.");
 				Thread.currentThread().interrupt();
