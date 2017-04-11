@@ -194,8 +194,8 @@ public class TorrentManager extends Thread {
 
 		@Override
 		public void run() {
-			//System.out.println("Peer interested in me size is " + peersInterestedInMe.size());
-
+			System.out.println("Peer interested in me size is " + peersInterestedInMe.size());
+			
 			if (!peersInterestedInMe.isEmpty()) {
 				System.out.println("Interested size:" + peersInterestedInMe.size());
 				unchokedList.clear();
@@ -242,6 +242,7 @@ public class TorrentManager extends Thread {
 		@Override
 		public void run() {
 
+			System.out.println("Choked List size: " + chokedList.size());
 			if (!chokedList.isEmpty()) {
 				int random = new Random().nextInt(chokedList.size());
 
