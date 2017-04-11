@@ -95,7 +95,6 @@ public class TorrentManager extends Thread {
 		File file = new File(fileName);
 
 		if (file.exists()) {
-			//System.out.println(file.length());
 			if (file.length() != fileSize) {
 				System.out.println("File size discrepancy.");
 				Thread.currentThread().interrupt();
@@ -112,7 +111,7 @@ public class TorrentManager extends Thread {
 
 			}
 		}
-
+		
 	}
 
 	public void establishClientConnections() {
@@ -194,10 +193,8 @@ public class TorrentManager extends Thread {
 
 		@Override
 		public void run() {
-			System.out.println("Peer interested in me size is " + peersInterestedInMe.size());
 			
 			if (!peersInterestedInMe.isEmpty()) {
-				System.out.println("Interested size:" + peersInterestedInMe.size());
 				unchokedList.clear();
 				chokedList.clear();
 				int count = 0;
@@ -212,7 +209,6 @@ public class TorrentManager extends Thread {
 						if (peer.getPeerId() != optimisticallyUnchokedPeer) {
 							chokedList.add(peer);
 							if (!peer.isChoked) {
-								// getConnectionByPeerID(peer.peerId).getChokeSignal().notify();
 								sendChokeMessage(peer.peerId);
 								peersInterestedInMe.get(peer.peerId).isChoked = true;
 							}
@@ -222,7 +218,6 @@ public class TorrentManager extends Thread {
 						unchokedList.add(peer);
 						prefList[count] = String.valueOf(peer.peerId);
 						if (peer.isChoked) {
-							// getConnectionByPeerID(peer.peerId).getUnchokeSignal().notify();
 							sendUnchokeMessage(peer.peerId);
 							peersInterestedInMe.get(peer.peerId).isChoked = false;
 						}
@@ -242,7 +237,6 @@ public class TorrentManager extends Thread {
 		@Override
 		public void run() {
 
-			System.out.println("Choked List size: " + chokedList.size());
 			if (!chokedList.isEmpty()) {
 				int random = new Random().nextInt(chokedList.size());
 
@@ -251,7 +245,6 @@ public class TorrentManager extends Thread {
 				optimisticallyUnchokedPeer = peer.peerId;
 
 				if (peersInterestedInMe.get(peer.peerId).isChoked) {
-					// getConnectionByPeerID(optimisticallyUnchokedPeer).getUnchokeSignal().notify();
 					sendUnchokeMessage(optimisticallyUnchokedPeer);
 					peersInterestedInMe.get(peer.peerId).isChoked = false;
 				}
@@ -326,7 +319,6 @@ public class TorrentManager extends Thread {
 				out.flush();
 			}
 		} catch (IOException e) {
-			logger.log("Send choke failed !! " + e.getMessage());
 			e.printStackTrace();
 		}
 
@@ -342,7 +334,6 @@ public class TorrentManager extends Thread {
 				out.flush();
 			}
 		} catch (IOException e) {
-			logger.log("Send unchoke failed !! " + e.getMessage());
 			e.printStackTrace();
 		}
 

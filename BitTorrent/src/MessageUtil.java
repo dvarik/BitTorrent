@@ -1,6 +1,3 @@
-import java.io.IOException;
-import java.io.InputStream;
-
 public class MessageUtil {
 
 	public static final byte[] HANDSHAKE_HEADER = "P2PFILESHARINGPROJ".getBytes();
@@ -94,7 +91,7 @@ public class MessageUtil {
 		return result;
 	}
 
-	public synchronized static void readMessage(InputStream in, byte[] msgArray, int length) throws IOException {
+	/*public synchronized static void readMessage(InputStream in, byte[] msgArray, int length) throws IOException {
 		int len = length;
 		int idx = 0;
 		while (len != 0) {
@@ -109,6 +106,6 @@ public class MessageUtil {
 				len -= read;
 			}
 		}
-	}
+	}*/
 
 }
