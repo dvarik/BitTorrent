@@ -276,23 +276,24 @@ public class TorrentManager extends Thread {
 		@Override
 		public void run() {
 
-			PeerConfig myPeerInfo = ConfigurationReader.getInstance().getPeerInfo().get(myPeerId);
-
-			byte[] myBitField = myPeerInfo.getBitfield();
-
 			if (openTCPconnections.size() == ConfigurationReader.getInstance().getPeerInfo().size()-1) {
 
 				boolean shutDown = true;
 
 				for (P2PConnectionThread p : openTCPconnections) {
 					byte[] pBitFieldMsg = p.getPeerInfo().getBitfield();
-					if (Arrays.equals(pBitFieldMsg, myBitField) == false) {
+					if (Arrays.equals(pBitFieldMsg, PeerConfig.fullBitfield) == false) {
 						shutDown = false;
 						break;
 					}
 				}
 
 				if (shutDown) {
+					try {
+						Thread.sleep(5000);
+					} catch (InterruptedException e1) {
+						e1.printStackTrace();
+					}
 					for (P2PConnectionThread p : openTCPconnections) {
 						p.shutDownCleanly();
 						p.interrupt();
