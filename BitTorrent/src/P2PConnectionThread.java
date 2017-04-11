@@ -183,7 +183,8 @@ public class P2PConnectionThread extends Thread {
 					}
 					updatePeerBitField(pieceNum);
 					logger.log("Peer " + myInfo.getPeerId()
-							+ " received the have message from " + peerInfo.getPeerId());
+							+ " received the have message from " + peerInfo.getPeerId()
+							+ "for the piece " + pieceNum);
 					break;
 				case INTERESTED:
 					System.out.println("Received an interested message from peer id " + peerInfo.getPeerId());
@@ -272,6 +273,8 @@ public class P2PConnectionThread extends Thread {
 						try (FileOutputStream fileOutputStream = new FileOutputStream(file)) {
 							fileOutputStream.write(fileData);
 							fileOutputStream.close();
+							logger.log("Peer " + myInfo.getPeerId() + "has downloaded "
+									+ "the complete file");
 						} catch (IOException e) {
 							e.printStackTrace();
 						}
