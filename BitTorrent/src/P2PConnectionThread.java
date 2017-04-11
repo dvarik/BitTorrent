@@ -145,8 +145,6 @@ public class P2PConnectionThread extends Thread {
 			System.out.println("Sending not interested message to peer");
 			sendNotInterestedMessage();
 		}
-/*		scheduler.execute(sendChoke);
-		scheduler.execute(sendUnchoke);*/
 
 		while(!shutdown){
 
@@ -154,6 +152,12 @@ public class P2PConnectionThread extends Thread {
 				byte[] message = new byte[5];
 				in.read(message);
 				byte typeVal = message[4];
+				int msgLen = MessageUtil.byteArrayToInteger(Arrays.copyOf(message, 4));
+				if (msgLen == 0) {
+					System.out.println("Socket closed, shutdown inititated.");
+					shutDownCleanly();
+					break;
+				}
 				MessageType msgType = MessageType.getType(typeVal);
 				byte[] myBitfield = myInfo.getBitfield();
 				byte[] pieceIndexData;
