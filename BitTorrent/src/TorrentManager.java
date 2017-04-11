@@ -189,6 +189,7 @@ public class TorrentManager extends Thread {
 
 	}
 
+	// to do - if complete file then random picking
 	final Runnable findPreferredNeighbour = new Runnable() {
 
 		@Override
