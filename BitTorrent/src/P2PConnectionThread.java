@@ -227,7 +227,7 @@ public class P2PConnectionThread extends Thread {
 					int stdPieceSize = Integer.parseInt(ConfigurationReader.
 							getInstance().getCommonProps().get("PieceSize"));
 					for (int i = 0; i < pieceDataLen; i++) {
-						fileData[pieceNum * stdPieceSize + i] = pieceData[i];
+						fileData[(pieceNum-1) * stdPieceSize + i] = pieceData[i];
 						//To - check if fileData is getting updated here
 					}
 					logger.log("Peer " + myInfo.getPeerId()
@@ -425,7 +425,7 @@ public class P2PConnectionThread extends Thread {
 	private void sendPieceMessage(int pieceNum) {
 
 		int pieceSize = Integer.parseInt(ConfigurationReader.getInstance().getCommonProps().get("PieceSize"));
-		int startIndex = pieceSize * pieceNum;
+		int startIndex = pieceSize * (pieceNum-1);
 		int endIndex = startIndex + pieceSize - 1;
 		if (endIndex >= fileData.length) {
 			endIndex = fileData.length - 1;
@@ -477,30 +477,26 @@ public class P2PConnectionThread extends Thread {
 		byte[] myPeerBitfield = peerInfo.getBitfield();
 		byte[] needToRequest = new byte[allRequestedBits.length];
 		byte[] requestedAndHave = new byte[allRequestedBits.length];
-
+		
 		for (int i = 0; i < allRequestedBits.length; i++) {
 			requestedAndHave[i] = (byte) (myBitfield[i] | allRequestedBits[i]);
 			needToRequest[i] = (byte) ((requestedAndHave[i] ^ myPeerBitfield[i]) & ~requestedAndHave[i]);
 		}
 		
-		ArrayList<Integer> needToReqInts = new ArrayList<Integer>();
-		for(int i=0;i<needToRequest.length;i++){
-			if(needToRequest[i] == 1)
-				needToReqInts.add(i);
-		}
-		
-		byte[] zerosByteArray = new byte[allRequestedBits.length];
-		if (Arrays.equals(needToRequest, zerosByteArray))
+		ArrayList<Integer> needToRequestPieces = myInfo.needToRequestPieces;
+		System.out.println(needToRequestPieces.size());
+//		byte[] zerosByteArray = new byte[allRequestedBits.length];
+		if (needToRequestPieces.isEmpty()) //Arrays.equals(needToRequest, zerosByteArray))
 		{
 			requestedPieceNum = -1;
 			return -1;
 		}
 		
-		int numPieces = Integer.parseInt(ConfigurationReader.getInstance().getCommonProps().get("numPieces"));
 		Random rand = new Random();
-		int randNum = rand.nextInt(numPieces - 1) + 1;
-		int byteIndex = randNum / 8;
-		int bitIndex = randNum % 8;
+		int randNum = rand.nextInt(needToRequestPieces.size() - 1) + 1;
+		int nextPiece = needToRequestPieces.get(randNum);
+		int byteIndex = nextPiece / 8;
+		int bitIndex = nextPiece % 8;
 
 		byte temp = needToRequest[byteIndex];
 		//Arrays.fill(zerosByteArray, (byte) 0);
@@ -508,19 +504,21 @@ public class P2PConnectionThread extends Thread {
 		System.out.println("Need to req array:" + Arrays.toString(needToRequest));
 
 		while (temp == 0 || (temp & (1 << bitIndex)) == 0) {
-			randNum = rand.nextInt(numPieces - 1) + 1;
-			byteIndex = randNum / 8;
-			bitIndex = randNum % 8;
+			randNum = rand.nextInt(needToRequestPieces.size() - 1) + 1;
+			nextPiece = needToRequestPieces.get(randNum);
+			byteIndex = nextPiece / 8;
+			bitIndex = nextPiece % 8;
 			temp = needToRequest[byteIndex];
 		}
 
-		requestedPieceNum = randNum;
+		requestedPieceNum = nextPiece;
 		allRequestedBits[byteIndex] |= (1 << bitIndex);
 		myInfo.setAllRequestedBits(allRequestedBits);
+		needToRequestPieces.remove(randNum);
 		
 		System.out.println("end of get next piece");
 		
-		return randNum;
+		return nextPiece;
 
 	}
 

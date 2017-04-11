@@ -1,3 +1,4 @@
+import java.util.ArrayList;
 import java.util.Arrays;
 
 /**
@@ -14,7 +15,7 @@ public class PeerConfig {
 	byte[] allRequestedBits;
 	boolean isChoked;
 	long downloadRate;
-
+	ArrayList<Integer> needToRequestPieces;
 
 	public PeerConfig(int peerId, String hostName, int port, int hasFile, int numPieces) {
 		super();
@@ -24,7 +25,15 @@ public class PeerConfig {
 		this.port = port;
 		this.hasFile = hasFile;
 		this.isChoked = true;
-
+		this.needToRequestPieces = new ArrayList<Integer>();
+		if (this.hasFile != 1) 
+		{
+			for(int i=0;i<numPieces;i++)
+			{
+				needToRequestPieces.add(i+1);
+			}
+		}
+		
 		bitfield = new byte[(int) Math.ceil(numPieces / 8.0d)];
 		Arrays.fill(bitfield, (byte) 0);
 		System.out.println("Bitfield length is " + bitfield.length);
