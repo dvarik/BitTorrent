@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * @author dvarik
@@ -476,49 +477,47 @@ public class P2PConnectionThread extends Thread {
 		byte[] myBitfield = myInfo.getBitfield();
 		byte[] myPeerBitfield = peerInfo.getBitfield();
 		byte[] needToRequest = new byte[allRequestedBits.length];
-		byte[] requestedAndHave = new byte[allRequestedBits.length];
+		byte[] requestedAndHaveCompl = new byte[allRequestedBits.length];
 
 		for (int i = 0; i < allRequestedBits.length; i++) {
-			requestedAndHave[i] = (byte) (myBitfield[i] | allRequestedBits[i]);
-			needToRequest[i] = (byte) ((requestedAndHave[i] ^ myPeerBitfield[i]) & ~requestedAndHave[i]);
-		}
-		
-		ArrayList<Integer> needToReqInts = new ArrayList<Integer>();
-		for(int i=0;i<needToRequest.length;i++){
-			if(needToRequest[i] == 1)
-				needToReqInts.add(i);
+			requestedAndHaveCompl[i] = (byte) (myBitfield[i] | allRequestedBits[i]);
+			needToRequest[i] = (byte) ((requestedAndHaveCompl[i] ^ myPeerBitfield[i]) & ~requestedAndHaveCompl[i]);
 		}
 		
 		byte[] zerosByteArray = new byte[allRequestedBits.length];
 		if (Arrays.equals(needToRequest, zerosByteArray))
 		{
 			requestedPieceNum = -1;
-			return -1;
+			return requestedPieceNum;
 		}
 		
 		int numPieces = Integer.parseInt(ConfigurationReader.getInstance().getCommonProps().get("numPieces"));
-		Random rand = new Random();
-		int randNum = rand.nextInt(numPieces - 1) + 1;
-		int byteIndex = randNum / 8;
-		int bitIndex = randNum % 8;
-
-		byte temp = needToRequest[byteIndex];
+		
 		//Arrays.fill(zerosByteArray, (byte) 0);
 
 		System.out.println("Need to req array:" + Arrays.toString(needToRequest));
 
-		while (temp == 0 || (temp & (1 << bitIndex)) == 0) {
-			randNum = rand.nextInt(numPieces - 1) + 1;
-			byteIndex = randNum / 8;
-			bitIndex = randNum % 8;
+		ArrayList<Integer> arr = new ArrayList<>();
+		for(int i=0;i<needToRequest.length;i++){
+			if((int)needToRequest[i] != 0)
+				arr.add(i);
+		}
+		
+		int randNum = ThreadLocalRandom.current().nextInt(0,arr.size());
+		byte chosenByte = needToRequest[arr.get(randNum)];
+		
+		int randBit = ThreadLocalRandom.current().nextInt(0,8);
+		
+		/*while (1 << bitIndex) == 0) {
+			randBit = ThreadLocalRandom.current().nextInt(0,8);
 			temp = needToRequest[byteIndex];
 		}
 
 		requestedPieceNum = randNum;
 		allRequestedBits[byteIndex] |= (1 << bitIndex);
 		myInfo.setAllRequestedBits(allRequestedBits);
-		
-		System.out.println("end of get next piece");
+		*/
+		System.out.println("End of get next piece");
 		
 		return randNum;
 
