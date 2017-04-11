@@ -246,8 +246,9 @@ public class P2PConnectionThread extends Thread {
 					else if(nextPieceNum == -1 && Arrays.equals(myInfo.getBitfield(), PeerConfig.fullBitfield))
 					{
 						System.out.println("Writing complete file.");
-						File file = new File(ConfigurationReader.getInstance().getCommonProps()
-								.get("FileName"));
+						File dir = getFileDir();
+						File file = new File(dir.getPath() + File.separator
+								+ ConfigurationReader.getInstance().getCommonProps().get("FileName"));
 						try (FileOutputStream fileOutputStream = new FileOutputStream(file)) {
 							fileOutputStream.write(fileData);
 							fileOutputStream.close();
@@ -321,6 +322,20 @@ public class P2PConnectionThread extends Thread {
 				e.printStackTrace();
 			}
 		}
+	}
+
+	private File getFileDir() {
+		File dir = new File("peer_" + myInfo.peerId);
+		if (!dir.exists()) {
+		    System.out.println("creating directory: " + dir.getName());
+		    try{
+		        dir.mkdir();
+		    } 
+		    catch(SecurityException se){
+		    	System.out.println(se);
+		    }        
+		}
+		return dir;
 	}
 
 	private synchronized void sendBitfieldMessage() {

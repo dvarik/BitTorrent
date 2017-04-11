@@ -92,7 +92,7 @@ public class TorrentManager extends Thread {
 		String fileName = ConfigurationReader.getInstance().getCommonProps().get("FileName");
 		Integer fileSize = Integer.parseInt(ConfigurationReader.getInstance().getCommonProps().get("FileSize"));
 		fileData = new byte[fileSize];
-		File file = new File(fileName);
+		File file = new File("peer_" + myPeerId + File.separator + fileName);
 
 		if (file.exists()) {
 			if (file.length() != fileSize) {
