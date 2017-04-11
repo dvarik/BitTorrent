@@ -188,7 +188,6 @@ public class TorrentManager extends Thread {
 
 	}
 
-	// to do - if complete file then random picking
 	final Runnable findPreferredNeighbour = new Runnable() {
 
 		@Override
@@ -202,7 +201,7 @@ public class TorrentManager extends Thread {
 				List<PeerConfig> peers = new ArrayList<PeerConfig>(peersInterestedInMe.values());
 				Collections.sort(peers, new DownloadComparator<PeerConfig>());
 
-				String[] prefList = new String[preferredNeighborCount];
+				String prefList = "";
 
 				for (PeerConfig peer : peers) {
 					if (count >= preferredNeighborCount) {
@@ -216,7 +215,7 @@ public class TorrentManager extends Thread {
 
 					} else {
 						unchokedList.add(peer);
-						prefList[count] = String.valueOf(peer.peerId);
+						prefList += "," + String.valueOf(peer.peerId);
 						if (peer.isChoked) {
 							sendUnchokeMessage(peer.peerId);
 							peersInterestedInMe.get(peer.peerId).isChoked = false;
@@ -225,9 +224,12 @@ public class TorrentManager extends Thread {
 					}
 					count++;
 				}
+				
+				if(!prefList.isEmpty()){
+					prefList.replaceFirst(",", "");
+				}
 
-				logger.log("Peer " + myPeerId + " has the preferred neighbors " + String.join(",", prefList));
-				prefList = null;
+				logger.log("Peer " + myPeerId + " has the preferred neighbors " + prefList);
 			}
 		}
 	};
