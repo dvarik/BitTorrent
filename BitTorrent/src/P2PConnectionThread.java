@@ -138,7 +138,7 @@ public class P2PConnectionThread extends Thread {
 
 		sendBitfieldMessage();
 		readNeighbourBitfieldMessage();
-		
+
 		if (isInterested())
 		{
 			System.out.println("Sending interested message to peer");
@@ -255,7 +255,7 @@ public class P2PConnectionThread extends Thread {
 					}
 
 					byte[] empty = new byte[myInfo.bitfield.length];
-					
+
 //					String fullBitField = Arrays.toString(empty);
 //					fullBitField = fullBitField.replaceAll("0", "1");
 					System.out.println("My bitfield: " + Arrays.toString(myInfo.getBitfield()));
@@ -399,7 +399,7 @@ public class P2PConnectionThread extends Thread {
 
 		byte[] bitfield = myInfo.getBitfield();
 		int pieceIndex = pieceNum / 8;
-		int bitIndex = pieceNum % 8;
+		int bitIndex = (pieceNum) % 8;
 		bitfield[pieceIndex] |= 1 << (7 - bitIndex);
 		myInfo.setBitfield(bitfield);
 
@@ -428,7 +428,7 @@ public class P2PConnectionThread extends Thread {
 	}
 
 	private void sendRequestMessage(int pieceNum) {
-		
+
 		System.out.println("Sending request msg");
 		if (pieceNum >= 0) {
 			byte[] pieceNumByteArray = MessageUtil.integerToByteArray(pieceNum);
@@ -457,28 +457,42 @@ public class P2PConnectionThread extends Thread {
 		// special case
 		// if pieceSize is greater than the entire file left
 
-		byte[] data = new byte[1 + 4 + endIndex - startIndex + 1]; // 4 is for
+		System.out.println("start index is " + startIndex + "end index is" + endIndex);
+		int dataLen = 1 + 4 + endIndex - startIndex + 1;
+		System.out.println("data length is " + dataLen);
+
+		byte[] data = new byte[dataLen]; // 4 is for
 		// pieceIndex
 
 		// write the piece index
-		byte[] pieceIndexByteArray = MessageUtil.integerToByteArray(pieceNum);
-		int i;
-		for (i = 0; i < 4; i++) {
-			data[i] = pieceIndexByteArray[i];
-		}
+		//System.out.println("Piece num is in send Piece " + pieceNum);
+		byte[] pieceNumByteArray = MessageUtil.integerToByteArray(pieceNum);
+		int i=0;
 
-		// write the message type
 		data[i] = (byte) MessageType.PIECE.getValue();
 		i++;
+
+		for (; i < 5; i++) {
+			data[i] = pieceNumByteArray[i-1];
+		}
+
+		//System.out.println("After writing pieceNum " + Arrays.toString(data));
+		// write the message type
 
 		// write the piece data
 		for (; startIndex <= endIndex; i++) {
 			data[i] = fileData[startIndex++];
 		}
 
+		byte[] message = new byte[dataLen+4];
+		message = MessageUtil.integerToByteArray(dataLen);
+		byte[] finalMessage = MessageUtil.concat(message, data);
+
+
 		try {
-			System.out.println("Message length is: " + data.length);
-			out.write(data);
+			System.out.println("Message length is: " + finalMessage.length);
+			//System.out.println(Arrays.toString(finalMessage));
+			out.write(finalMessage);
 			out.flush();
 		} catch (IOException e) {
 			System.out.println("IO exception in reading " + e.getMessage());
@@ -493,19 +507,19 @@ public class P2PConnectionThread extends Thread {
 	}
 
 	private int getNextToBeRequestedPiece() {
-		
+
 		System.out.println("start of get next piece");
 		byte[] allRequestedBits = myInfo.getAllRequestedBits();
 		byte[] myBitfield = myInfo.getBitfield();
 		byte[] myPeerBitfield = peerInfo.getBitfield();
 		byte[] needToRequest = new byte[allRequestedBits.length];
 		byte[] requestedAndHave = new byte[allRequestedBits.length];
-	
+
 		for (int i = 0; i < allRequestedBits.length; i++) {
 			requestedAndHave[i] = (byte) (myBitfield[i] | allRequestedBits[i]);
 			needToRequest[i] = (byte) ((requestedAndHave[i] ^ myPeerBitfield[i]) & ~requestedAndHave[i]);
 		}
-		
+
 		ArrayList<Integer> needToRequestPieces = myInfo.needToRequestPieces;
 		if (needToRequestPieces.isEmpty()) //Arrays.equals(needToRequest, zerosByteArray))
 		{
@@ -517,7 +531,7 @@ public class P2PConnectionThread extends Thread {
 		int byteIndex = nextPiece / 8;
 		int bitIndex = nextPiece % 8;
 
-		
+
 /*		Random rand = new Random();
 		int randNum = rand.nextInt(needToRequestPieces.size() - 1) + 1;
 		int nextPiece = needToRequestPieces.get(randNum);
@@ -542,9 +556,9 @@ public class P2PConnectionThread extends Thread {
 		allRequestedBits[byteIndex] |= (1 << (7-bitIndex));
 		myInfo.setAllRequestedBits(allRequestedBits);
 		needToRequestPieces.remove(0);
-		
+
 		System.out.println("end of get next piece");
-		
+
 		return nextPiece;
 
 	}

@@ -280,7 +280,7 @@ public class TorrentManager extends Thread {
 
 			byte[] myBitField = myPeerInfo.getBitfield();
 
-			if (openTCPconnections.size() == ConfigurationReader.getInstance().getPeerInfo().size()) {
+			if (openTCPconnections.size() == ConfigurationReader.getInstance().getPeerInfo().size()-1) {
 
 				boolean shutDown = true;
 

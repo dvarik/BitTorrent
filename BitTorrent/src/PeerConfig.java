@@ -27,14 +27,14 @@ public class PeerConfig {
 		this.hasFile = hasFile;
 		this.isChoked = true;
 		this.needToRequestPieces = new ArrayList<Integer>();
-		if (this.hasFile != 1) 
+		if (this.hasFile != 1)
 		{
 			for(int i=0;i<numPieces;i++)
 			{
 				needToRequestPieces.add(i);
 			}
 		}
-		
+
 		fullBitfield = new byte[(int) Math.ceil(numPieces / 8.0d)];
 		initializeBitfield(numPieces, fullBitfield);
 		bitfield = new byte[(int) Math.ceil(numPieces / 8.0d)];
