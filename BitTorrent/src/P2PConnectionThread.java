@@ -1,5 +1,6 @@
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
+import java.io.Closeable;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -229,6 +230,24 @@ public class P2PConnectionThread extends Thread {
 					// send have message to rest of the peers
 					setMyBitfield(pieceNum);
 
+					//saving partial files
+					System.out.println("Writing partial file.");
+					File dir = getFileDir();
+					File file = new File(dir.getPath() + File.separator
+							+ "PartFile_"+Integer.toString(pieceNum+1) + ".part");
+					try (FileOutputStream fileOutputStream = new FileOutputStream(file)) 
+					{
+						fileOutputStream.write(pieceData);
+						fileOutputStream.close();
+						logger.log("Peer " + myInfo.getPeerId() + "has downloaded "
+								+ pieceNum + " file");
+					} 
+					catch (IOException e) 
+					{
+						e.printStackTrace();
+					}
+
+					//sending have messages to all the peers
 					HashMap<Integer, PeerConfig> peerList = ConfigurationReader.getInstance()
 							.getPeerInfo();
 					peerList.remove(myInfo.peerId);
@@ -249,17 +268,32 @@ public class P2PConnectionThread extends Thread {
 					}
 					else if(nextPieceNum == -1 && Arrays.equals(myInfo.getBitfield(), PeerConfig.fullBitfield))
 					{
+						//delete all partial files
+						File folder = new File(dir.getPath());
+						for(File f: folder.listFiles())
+						{
+						    if(f.getName().startsWith("PartFile_"))
+						    {
+						    	f.delete();
+						    }
+						}
+						
+						//write the complete file
 						System.out.println("Writing complete file.");
-						File dir = getFileDir();
-						File file = new File(dir.getPath() + File.separator
+						dir = getFileDir();
+						file = new File(dir.getPath() + File.separator
 								+ ConfigurationReader.getInstance().getCommonProps().get("FileName"));
-						synchronized (TorrentManager.fileData) {
+						synchronized (TorrentManager.fileData) 
+						{
 
-							try (FileOutputStream fileOutputStream = new FileOutputStream(file)) {
+							try (FileOutputStream fileOutputStream = new FileOutputStream(file)) 
+							{
 								fileOutputStream.write(TorrentManager.fileData);
 								fileOutputStream.close();
 								logger.log("Peer " + myInfo.getPeerId() + "has downloaded " + "the complete file");
-							} catch (IOException e) {
+							} 
+							catch (IOException e) 
+							{
 								e.printStackTrace();
 							}
 						}
@@ -334,7 +368,8 @@ public class P2PConnectionThread extends Thread {
 		File dir = new File("peer_" + myInfo.peerId);
 		if (!dir.exists()) {
 		    System.out.println("creating directory: " + dir.getName());
-		    try{
+		    try
+		    {
 		        dir.mkdir();
 		    } 
 		    catch(SecurityException se){
@@ -457,7 +492,7 @@ public class P2PConnectionThread extends Thread {
 		byte[] message = new byte[dataLen+4];
 		message = MessageUtil.integerToByteArray(dataLen);
 		byte[] finalMessage = MessageUtil.concat(message, data);
-		System.out.println(Arrays.toString(finalMessage));
+//		System.out.println(Arrays.toString(finalMessage));
 		try {
 			synchronized(out){
 			out.write(finalMessage);
