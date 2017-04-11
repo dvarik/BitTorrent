@@ -12,7 +12,7 @@ public class PeerConfig {
 	int port;
 	int hasFile;
 	byte[] bitfield;
-	static byte[] allRequestedBits;
+	//static byte[] allRequestedBits;
 	boolean isChoked;
 	long downloadRate;
 	ArrayList<Integer> needToRequestPieces;
@@ -41,8 +41,6 @@ public class PeerConfig {
 		Arrays.fill(bitfield, (byte) 0);
 		System.out.println("Bitfield length is " + bitfield.length);
 		System.out.println("numpieces:" + numPieces);
-		allRequestedBits = new byte[(int) Math.ceil(numPieces / 8.0d)];
-		Arrays.fill(allRequestedBits, (byte) 0);
 
 		if (this.hasFile == 1) {
 			initializeBitfield(numPieces, bitfield);
@@ -106,13 +104,13 @@ public class PeerConfig {
 		this.bitfield = bf;
 	}
 
-	public byte[] getAllRequestedBits() {
+/*	public byte[] getAllRequestedBits() {
 		return this.allRequestedBits;
 	}
 
 	public void setAllRequestedBits(byte[] bf) {
 		this.allRequestedBits = bf;
-	}
+	}*/
 
 	public boolean getIsChoked() {
 		return isChoked;

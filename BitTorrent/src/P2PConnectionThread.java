@@ -34,18 +34,15 @@ public class P2PConnectionThread extends Thread {
 
 	private volatile boolean shutdown = false;
 
-	private final byte[] fileData;
-
 	private int requestedPieceNum;
 
 	private long requestTime;
 	
 
-	public P2PConnectionThread(PeerConfig myPeerI, PeerConfig neighbourPeerI, Socket s, boolean isClient, byte[] data)
+	public P2PConnectionThread(PeerConfig myPeerI, PeerConfig neighbourPeerI, Socket s, boolean isClient)
 			throws Exception {
 		super();
 
-		this.fileData = data;
 		this.isClientConnection = isClient;
 		this.socket = s;
 		this.requestedPieceNum = -1;
@@ -221,13 +218,14 @@ public class P2PConnectionThread extends Thread {
 					pieceNum = MessageUtil.byteArrayToInteger(pieceIndexData);
 					int stdPieceSize = Integer.parseInt(ConfigurationReader.
 							getInstance().getCommonProps().get("PieceSize"));
-					for (int i = 0; i < pieceDataLen; i++) {
-						fileData[(pieceNum) * stdPieceSize + i] = pieceData[i];
+					synchronized(TorrentManager.fileData){
+						for (int i = 0; i < pieceDataLen; i++) {
+							TorrentManager.fileData[(pieceNum) * stdPieceSize + i] = pieceData[i];
+						}
 					}
 					logger.log("Peer " + myInfo.getPeerId()
 							+ " has downloaded the piece " + pieceNum + " from "
 							+ peerInfo.getPeerId());
-
 					// send have message to rest of the peers
 					setMyBitfield(pieceNum);
 
@@ -255,15 +253,16 @@ public class P2PConnectionThread extends Thread {
 						File dir = getFileDir();
 						File file = new File(dir.getPath() + File.separator
 								+ ConfigurationReader.getInstance().getCommonProps().get("FileName"));
-						try (FileOutputStream fileOutputStream = new FileOutputStream(file)) {
-							fileOutputStream.write(fileData);
-							fileOutputStream.close();
-							logger.log("Peer " + myInfo.getPeerId() + "has downloaded "
-									+ "the complete file");
-						} catch (IOException e) {
-							e.printStackTrace();
-						}
+						synchronized (TorrentManager.fileData) {
 
+							try (FileOutputStream fileOutputStream = new FileOutputStream(file)) {
+								fileOutputStream.write(TorrentManager.fileData);
+								fileOutputStream.close();
+								logger.log("Peer " + myInfo.getPeerId() + "has downloaded " + "the complete file");
+							} catch (IOException e) {
+								e.printStackTrace();
+							}
+						}
 					}
 					else if(nextPieceNum == -1){
 						sendNotInterestedMessage();
@@ -323,6 +322,7 @@ public class P2PConnectionThread extends Thread {
 			}catch (SocketException s) {
 				s.printStackTrace();
 				shutDownCleanly();
+				this.interrupt();
 			} 
 			catch (IOException e) {
 				e.printStackTrace();
@@ -428,13 +428,13 @@ public class P2PConnectionThread extends Thread {
 		}
 	}
 
-	private void sendPieceMessage(int pieceNum) {
+	private synchronized void sendPieceMessage(int pieceNum) {
 
 		int pieceSize = Integer.parseInt(ConfigurationReader.getInstance().getCommonProps().get("PieceSize"));
 		int startIndex = pieceSize * (pieceNum);
 		int endIndex = startIndex + pieceSize - 1;
-		if (endIndex >= fileData.length) {
-			endIndex = fileData.length - 1;
+		if (endIndex >= TorrentManager.fileData.length) {
+			endIndex = TorrentManager.fileData.length - 1;
 		}
 
 		int dataLen = 1 + 4 + endIndex - startIndex + 1;
@@ -451,13 +451,13 @@ public class P2PConnectionThread extends Thread {
 		}
 
 		for (; startIndex <= endIndex; i++) {
-			data[i] = fileData[startIndex++];
+			data[i] = TorrentManager.fileData[startIndex++];
 		}
 
 		byte[] message = new byte[dataLen+4];
 		message = MessageUtil.integerToByteArray(dataLen);
 		byte[] finalMessage = MessageUtil.concat(message, data);
-
+		System.out.println(Arrays.toString(finalMessage));
 		try {
 			synchronized(out){
 			out.write(finalMessage);
@@ -470,21 +470,18 @@ public class P2PConnectionThread extends Thread {
 	}
 
 	private synchronized void resetPieceIndexRequested(int byteIndex, int bitIndex) {
-		byte[] bitFieldRequested = myInfo.getAllRequestedBits();
-		bitFieldRequested[byteIndex] &= ~(1 << (7 - bitIndex));
-		myInfo.setAllRequestedBits(bitFieldRequested);
+		TorrentManager.allRequestedBits[byteIndex] &= ~(1 << (7 - bitIndex));
 	}
 
 	private synchronized int getNextToBeRequestedPiece() {
 
-		byte[] allRequestedBits = myInfo.getAllRequestedBits();
 		byte[] myBitfield = TorrentManager.mybitField;
 		byte[] myPeerBitfield = peerInfo.getBitfield();
-		byte[] needToRequest = new byte[allRequestedBits.length];
-		byte[] requestedAndHave = new byte[allRequestedBits.length];
+		byte[] needToRequest = new byte[TorrentManager.allRequestedBits.length];
+		byte[] requestedAndHave = new byte[TorrentManager.allRequestedBits.length];
 
-		for (int i = 0; i < allRequestedBits.length; i++) {
-			requestedAndHave[i] = (byte) (myBitfield[i] | allRequestedBits[i]);
+		for (int i = 0; i < TorrentManager.allRequestedBits.length; i++) {
+			requestedAndHave[i] = (byte) (myBitfield[i] | TorrentManager.allRequestedBits[i]);
 			needToRequest[i] = (byte) ((requestedAndHave[i] ^ myPeerBitfield[i]) & ~requestedAndHave[i]);
 		}
 
@@ -521,8 +518,7 @@ public class P2PConnectionThread extends Thread {
 		}
 */
 		requestedPieceNum = nextPiece;
-		allRequestedBits[byteIndex] |= (1 << (7-bitIndex));
-		myInfo.setAllRequestedBits(allRequestedBits);
+		TorrentManager.allRequestedBits[byteIndex] |= (1 << (7-bitIndex));
 		needToRequestPieces.remove(0);
 
 		return nextPiece;

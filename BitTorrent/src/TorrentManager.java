@@ -37,12 +37,14 @@ public class TorrentManager extends Thread {
 	final int preferredNeighborCount;
 	
 	static byte[] mybitField;
-
+	
+	static byte[] fileData;
+	
+	static byte[] allRequestedBits;
+	
 	List<P2PConnectionThread> openTCPconnections = new ArrayList<P2PConnectionThread>();
 
 	static volatile int optimisticallyUnchokedPeer = -1;
-
-	private byte[] fileData = null;
 
 	static List<PeerConfig> unchokedList = Collections.synchronizedList(new ArrayList<PeerConfig>());
 
@@ -77,7 +79,12 @@ public class TorrentManager extends Thread {
 
 		setFileData();
 		
+		//System.out.println(Arrays.toString(fileData));
+		
 		mybitField = myPeerInfo.bitfield;
+		allRequestedBits = new byte[(int) Math
+				.ceil(Integer.parseInt(ConfigurationReader.getInstance().getCommonProps().get("numPieces")) / 8.0d)];
+		Arrays.fill(allRequestedBits, (byte) 0);
 
 		establishClientConnections();
 
@@ -96,6 +103,7 @@ public class TorrentManager extends Thread {
 		String fileName = ConfigurationReader.getInstance().getCommonProps().get("FileName");
 		Integer fileSize = Integer.parseInt(ConfigurationReader.getInstance().getCommonProps().get("FileSize"));
 		fileData = new byte[fileSize];
+		
 		File file = new File("peer_" + myPeerId + File.separator + fileName);
 
 		if (file.exists()) {
@@ -131,7 +139,7 @@ public class TorrentManager extends Thread {
 				try {
 					// create a socket to connect to the peer
 					P2PConnectionThread p = new P2PConnectionThread(myPeerInfo, currPeerInfo,
-							new Socket(currPeerInfo.hostName, currPeerInfo.port), true, fileData);
+							new Socket(currPeerInfo.hostName, currPeerInfo.port), true);
 
 					logger.log("Peer " + myPeerId + " makes a connection to Peer " + currPeerId);
 
@@ -176,8 +184,7 @@ public class TorrentManager extends Thread {
 			while (expectedConnections > 0) {
 				Socket acceptedSocket = serverSocket.accept();
 				if (acceptedSocket != null) {
-					P2PConnectionThread peerThread = new P2PConnectionThread(myPeerInfo, null, acceptedSocket, false,
-							fileData);
+					P2PConnectionThread peerThread = new P2PConnectionThread(myPeerInfo, null, acceptedSocket, false);
 					openTCPconnections.add(peerThread);
 					peerThread.start();
 					logger.log("Peer " + myPeerId + " is connected from Peer " + peerThread.getPeerInfo().peerId);
