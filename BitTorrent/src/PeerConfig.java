@@ -12,7 +12,7 @@ public class PeerConfig {
 	int port;
 	int hasFile;
 	byte[] bitfield;
-	byte[] allRequestedBits;
+	static byte[] allRequestedBits;
 	boolean isChoked;
 	long downloadRate;
 	ArrayList<Integer> needToRequestPieces;

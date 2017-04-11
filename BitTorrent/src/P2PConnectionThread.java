@@ -159,7 +159,7 @@ public class P2PConnectionThread extends Thread {
 					break;
 				}
 				MessageType msgType = MessageType.getType(typeVal);
-				byte[] myBitfield = myInfo.getBitfield();
+				//byte[] myBitfield = myInfo.getBitfield();
 				byte[] pieceIndexData;
 				byte byteData;
 				int pieceNum;
@@ -173,7 +173,9 @@ public class P2PConnectionThread extends Thread {
 					pieceIndexData = new byte[4];
 					in.read(pieceIndexData);
 					pieceNum = MessageUtil.byteArrayToInteger(pieceIndexData);
-					byteData = myBitfield[pieceNum / 8];
+					synchronized (TorrentManager.mybitField) {
+						byteData = TorrentManager.mybitField[pieceNum / 8];
+					}
 					if ((byteData & (1 << (7 - (pieceNum % 8)))) == 0) {
 						sendInterestedMessage();
 					}
@@ -280,9 +282,9 @@ public class P2PConnectionThread extends Thread {
 					break;
 				case CHOKE:
 					System.out.println("Received choke message from peer id " + peerInfo.getPeerId());
-
-					byteData = myBitfield[requestedPieceNum / 8];
-
+					synchronized (TorrentManager.mybitField) {
+						byteData = TorrentManager.mybitField[requestedPieceNum / 8];
+					}
 					if ((byteData & (1 << (7 - (requestedPieceNum % 8)))) == 0) {
 						// I don't have this piece
 						resetPieceIndexRequested(requestedPieceNum / 8,
@@ -344,7 +346,7 @@ public class P2PConnectionThread extends Thread {
 
 	private synchronized void sendBitfieldMessage() {
 		try {
-			byte[] myBitfield = myInfo.getBitfield();
+			byte[] myBitfield = TorrentManager.mybitField;
 			byte[] message = MessageUtil.getMessage(myBitfield, MessageType.BITFIELD);
 			out.write(message);
 			out.flush();
@@ -376,13 +378,11 @@ public class P2PConnectionThread extends Thread {
 
 	}
 
-	private void setMyBitfield(int pieceNum) {
+	private synchronized void setMyBitfield(int pieceNum) {
 
-		byte[] bitfield = myInfo.getBitfield();
 		int pieceIndex = pieceNum / 8;
 		int bitIndex = (pieceNum) % 8;
-		bitfield[pieceIndex] |= 1 << (7 - bitIndex);
-		myInfo.setBitfield(bitfield);
+		TorrentManager.mybitField[pieceIndex] |= 1 << (7 - bitIndex);
 
 	}
 
@@ -469,7 +469,7 @@ public class P2PConnectionThread extends Thread {
 		}
 	}
 
-	private void resetPieceIndexRequested(int byteIndex, int bitIndex) {
+	private synchronized void resetPieceIndexRequested(int byteIndex, int bitIndex) {
 		byte[] bitFieldRequested = myInfo.getAllRequestedBits();
 		bitFieldRequested[byteIndex] &= ~(1 << (7 - bitIndex));
 		myInfo.setAllRequestedBits(bitFieldRequested);
@@ -478,7 +478,7 @@ public class P2PConnectionThread extends Thread {
 	private synchronized int getNextToBeRequestedPiece() {
 
 		byte[] allRequestedBits = myInfo.getAllRequestedBits();
-		byte[] myBitfield = myInfo.getBitfield();
+		byte[] myBitfield = TorrentManager.mybitField;
 		byte[] myPeerBitfield = peerInfo.getBitfield();
 		byte[] needToRequest = new byte[allRequestedBits.length];
 		byte[] requestedAndHave = new byte[allRequestedBits.length];
@@ -530,9 +530,9 @@ public class P2PConnectionThread extends Thread {
 	}
 
 
-	private boolean isInterested() {
+	private synchronized boolean isInterested() {
 
-		byte[] myBitfield = myInfo.getBitfield();
+		byte[] myBitfield = TorrentManager.mybitField;
 		byte[] peerBitfield = peerInfo.getBitfield();
 
 		for (int i = 0; i < myBitfield.length; i++) {

@@ -35,6 +35,8 @@ public class TorrentManager extends Thread {
 	final int preferredUnchokeInterval;
 
 	final int preferredNeighborCount;
+	
+	static byte[] mybitField;
 
 	List<P2PConnectionThread> openTCPconnections = new ArrayList<P2PConnectionThread>();
 
@@ -74,6 +76,8 @@ public class TorrentManager extends Thread {
 		PeerConfig myPeerInfo = ConfigurationReader.getInstance().getPeerInfo().get(myPeerId);
 
 		setFileData();
+		
+		mybitField = myPeerInfo.bitfield;
 
 		establishClientConnections();
 
