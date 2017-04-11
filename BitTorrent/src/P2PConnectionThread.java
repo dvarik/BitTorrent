@@ -264,12 +264,14 @@ public class P2PConnectionThread extends Thread {
 					{
 						sendInterestedMessage();
 					}
-					else if(nextPieceNum == -1 && Arrays.toString(myInfo.getBitfield()).equals(PeerConfig.fullBitfield))
+					else if(nextPieceNum == -1 && Arrays.equals(myInfo.getBitfield(), PeerConfig.fullBitfield))
 					{
+						System.out.println("Inside file writing if loop");
 						File file = new File(ConfigurationReader.getInstance().getCommonProps()
 								.get("FileName"));
 						try (FileOutputStream fileOutputStream = new FileOutputStream(file)) {
 							fileOutputStream.write(fileData);
+							fileOutputStream.close();
 						} catch (IOException e) {
 							e.printStackTrace();
 						}
