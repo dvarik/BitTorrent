@@ -15,7 +15,9 @@ public class startRemotePeers {
 		for (Integer peerId : peers.keySet()) {
 			String hostname = peers.get(peerId);
 
-			Runtime.getRuntime().exec("ssh " + hostname + " cd " + workingDir + " ; " + peerProcessName + " " + peerId);
+			Runtime.getRuntime().exec(
+					"ssh " + hostname + " cd " + workingDir + " ; "
+							+ peerProcessName + " " + peerId);
 		}
 
 	}
@@ -24,8 +26,8 @@ public class startRemotePeers {
 
 		TreeMap<Integer, String> ret = new TreeMap<Integer, String>();
 		try {
-			BufferedReader br = new BufferedReader(
-					new InputStreamReader(getClass().getResourceAsStream("PeerInfo.cfg")));
+			BufferedReader br = new BufferedReader(new InputStreamReader(
+					getClass().getResourceAsStream("PeerInfo.cfg")));
 
 			String line = null;
 

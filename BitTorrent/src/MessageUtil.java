@@ -1,6 +1,7 @@
 public class MessageUtil {
 
-	public static final byte[] HANDSHAKE_HEADER = "P2PFILESHARINGPROJ".getBytes();
+	public static final byte[] HANDSHAKE_HEADER = "P2PFILESHARINGPROJ"
+			.getBytes();
 
 	public static final byte[] ZERO_BITS = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 
@@ -18,19 +19,23 @@ public class MessageUtil {
 		return concat(msgLength, mType.value);
 	}
 
-	public static byte[] getMessage(final byte[] payload, final MessageType mType) {
+	public static byte[] getMessage(final byte[] payload,
+			final MessageType mType) {
 		byte[] msgLength = integerToByteArray(payload.length + 1);
 		byte[] temp = concat(msgLength, mType.value);
 		return concat(temp, payload);
 	}
 
-	public static byte[] getMessage(final String payload, final MessageType msgType) {
+	public static byte[] getMessage(final String payload,
+			final MessageType msgType) {
 		int l = payload.getBytes().length;
 		byte[] msgL = MessageUtil.integerToByteArray(l + 1); // plus one for
 																// message
 																// type
-		return MessageUtil.concatenateByteArrays(msgL,
-				MessageUtil.concatenateByteArray(msgType.value, payload.getBytes()));
+		return MessageUtil.concatenateByteArrays(
+				msgL,
+				MessageUtil.concatenateByteArray(msgType.value,
+						payload.getBytes()));
 	}
 
 	public static byte[] concatenateByteArray(final byte b, final byte[] a) {
@@ -84,28 +89,12 @@ public class MessageUtil {
 		return result;
 	}
 
-	public static byte[] concatenateByteArrays(final byte[] a, final int aLength, final byte[] b, final int bLength) {
+	public static byte[] concatenateByteArrays(final byte[] a,
+			final int aLength, final byte[] b, final int bLength) {
 		byte[] result = new byte[aLength + bLength];
 		System.arraycopy(a, 0, result, 0, aLength);
 		System.arraycopy(b, 0, result, aLength, bLength);
 		return result;
 	}
-
-	/*public synchronized static void readMessage(InputStream in, byte[] msgArray, int length) throws IOException {
-		int len = length;
-		int idx = 0;
-		while (len != 0) {
-			int dataAvailableLength = in.available();
-			int read = Math.min(len, dataAvailableLength);
-			//System.out.println("size read " +  read);
-			byte[] dataRead = new byte[read];
-			if (read != 0) {
-				in.read(dataRead);
-				msgArray = MessageUtil.concatenateByteArrays(msgArray, idx, dataRead, read);
-				idx += read;
-				len -= read;
-			}
-		}
-	}*/
 
 }

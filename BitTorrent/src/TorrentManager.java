@@ -35,20 +35,22 @@ public class TorrentManager extends Thread {
 	final int preferredUnchokeInterval;
 
 	final int preferredNeighborCount;
-	
+
 	static byte[] mybitField;
-	
+
 	static byte[] fileData;
-	
+
 	static byte[] allRequestedBits;
-	
+
 	List<P2PConnectionThread> openTCPconnections = new ArrayList<P2PConnectionThread>();
 
 	static volatile int optimisticallyUnchokedPeer = -1;
 
-	static List<PeerConfig> unchokedList = Collections.synchronizedList(new ArrayList<PeerConfig>());
+	static List<PeerConfig> unchokedList = Collections
+			.synchronizedList(new ArrayList<PeerConfig>());
 
-	static List<PeerConfig> chokedList = Collections.synchronizedList(new ArrayList<PeerConfig>());
+	static List<PeerConfig> chokedList = Collections
+			.synchronizedList(new ArrayList<PeerConfig>());
 
 	public static ConcurrentHashMap<Integer, PeerConfig> peersInterestedInMe = new ConcurrentHashMap<Integer, PeerConfig>();
 
@@ -56,11 +58,13 @@ public class TorrentManager extends Thread {
 
 	ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(3);
 
-	public TorrentManager(int peerId, int optimisticUnchoke, int preferredUnchoke, int preferredNeighbor) {
+	public TorrentManager(int peerId, int optimisticUnchoke,
+			int preferredUnchoke, int preferredNeighbor) {
 
 		this.myPeerId = peerId;
 
-		this.myPeerInfo = ConfigurationReader.getInstance().getPeerInfo().get(myPeerId);
+		this.myPeerInfo = ConfigurationReader.getInstance().getPeerInfo()
+				.get(myPeerId);
 
 		this.logger = LoggerUtility.getInstance(myPeerId);
 
@@ -75,35 +79,38 @@ public class TorrentManager extends Thread {
 	@Override
 	public void run() {
 
-		PeerConfig myPeerInfo = ConfigurationReader.getInstance().getPeerInfo().get(myPeerId);
+		PeerConfig myPeerInfo = ConfigurationReader.getInstance().getPeerInfo()
+				.get(myPeerId);
 
 		setFileData();
-		
-		//System.out.println(Arrays.toString(fileData));
-		
+
 		mybitField = myPeerInfo.bitfield;
-		allRequestedBits = new byte[(int) Math
-				.ceil(Integer.parseInt(ConfigurationReader.getInstance().getCommonProps().get("numPieces")) / 8.0d)];
+		allRequestedBits = new byte[(int) Math.ceil(Integer
+				.parseInt(ConfigurationReader.getInstance().getCommonProps()
+						.get("numPieces")) / 8.0d)];
 		Arrays.fill(allRequestedBits, (byte) 0);
 
 		establishClientConnections();
 
 		acceptConnections(myPeerInfo.getPort());
 
-		scheduler.scheduleAtFixedRate(findPreferredNeighbour, 0, preferredUnchokeInterval, TimeUnit.SECONDS);
+		scheduler.scheduleAtFixedRate(findPreferredNeighbour, 0,
+				preferredUnchokeInterval, TimeUnit.SECONDS);
 
-		scheduler.scheduleAtFixedRate(findOptimisticallyUnchokedNeighbour, 0, optimisticUnchokeInterval,
-				TimeUnit.SECONDS);
+		scheduler.scheduleAtFixedRate(findOptimisticallyUnchokedNeighbour, 0,
+				optimisticUnchokeInterval, TimeUnit.SECONDS);
 
-		scheduler.scheduleAtFixedRate(shutdownTorrent, 3, 5, TimeUnit.SECONDS);
+		scheduler.scheduleAtFixedRate(shutdownTorrent, 3, 30, TimeUnit.SECONDS);
 	}
 
 	public void setFileData() {
 
-		String fileName = ConfigurationReader.getInstance().getCommonProps().get("FileName");
-		Integer fileSize = Integer.parseInt(ConfigurationReader.getInstance().getCommonProps().get("FileSize"));
+		String fileName = ConfigurationReader.getInstance().getCommonProps()
+				.get("FileName");
+		Integer fileSize = Integer.parseInt(ConfigurationReader.getInstance()
+				.getCommonProps().get("FileSize"));
 		fileData = new byte[fileSize];
-		
+
 		File file = new File("peer_" + myPeerId + File.separator + fileName);
 
 		if (file.exists()) {
@@ -123,12 +130,13 @@ public class TorrentManager extends Thread {
 
 			}
 		}
-		
+
 	}
 
 	public void establishClientConnections() {
 
-		HashMap<Integer, PeerConfig> peerMap = ConfigurationReader.getInstance().getPeerInfo();
+		HashMap<Integer, PeerConfig> peerMap = ConfigurationReader
+				.getInstance().getPeerInfo();
 
 		for (Integer currPeerId : peerMap.keySet()) {
 
@@ -138,29 +146,33 @@ public class TorrentManager extends Thread {
 
 				try {
 					// create a socket to connect to the peer
-					P2PConnectionThread p = new P2PConnectionThread(myPeerInfo, currPeerInfo,
-							new Socket(currPeerInfo.hostName, currPeerInfo.port), true);
+					P2PConnectionThread p = new P2PConnectionThread(myPeerInfo,
+							currPeerInfo, new Socket(currPeerInfo.hostName,
+									currPeerInfo.port), true);
 
-					logger.log("Peer " + myPeerId + " makes a connection to Peer " + currPeerId);
+					logger.log("Peer " + myPeerId
+							+ " makes a connection to Peer " + currPeerId);
 
-					System.out
-							.println("Connected to " + currPeerInfo.hostName + " on port number " + currPeerInfo.port);
+					System.out.println("Connected to " + currPeerInfo.hostName
+							+ " on port number " + currPeerInfo.port);
 
 					openTCPconnections.add(p);
 
 					p.start();
 
 				} catch (ConnectException e) {
-					System.err.println("Connection refused. You need to initiate a server first.");
-					logger.log(e.getMessage());
+					System.err
+							.println("Connection refused. You need to initiate a server first.");
+
 				} catch (UnknownHostException unknownHost) {
-					System.err.println("You are trying to connect to an unknown host!");
-					logger.log(unknownHost.getMessage());
+					System.err
+							.println("You are trying to connect to an unknown host!");
+
 				} catch (IOException ioException) {
 					ioException.printStackTrace();
-					logger.log(ioException.getMessage());
+
 				} catch (Exception handshakeError) {
-					logger.log(handshakeError.getMessage());
+					System.out.println(handshakeError.getMessage());
 				}
 
 			}
@@ -170,7 +182,8 @@ public class TorrentManager extends Thread {
 
 	public void acceptConnections(int port) {
 
-		HashMap<Integer, PeerConfig> peerMap = ConfigurationReader.getInstance().getPeerInfo();
+		HashMap<Integer, PeerConfig> peerMap = ConfigurationReader
+				.getInstance().getPeerInfo();
 
 		int expectedConnections = 0;
 		for (Integer currPeerId : peerMap.keySet()) {
@@ -184,17 +197,19 @@ public class TorrentManager extends Thread {
 			while (expectedConnections > 0) {
 				Socket acceptedSocket = serverSocket.accept();
 				if (acceptedSocket != null) {
-					P2PConnectionThread peerThread = new P2PConnectionThread(myPeerInfo, null, acceptedSocket, false);
+					P2PConnectionThread peerThread = new P2PConnectionThread(
+							myPeerInfo, null, acceptedSocket, false);
 					openTCPconnections.add(peerThread);
 					peerThread.start();
-					logger.log("Peer " + myPeerId + " is connected from Peer " + peerThread.getPeerInfo().peerId);
+					logger.log("Peer " + myPeerId + " is connected from Peer "
+							+ peerThread.getPeerInfo().peerId);
 					expectedConnections--;
 				}
 			}
 			serverSocket.close();
 		} catch (Exception e) {
 			e.printStackTrace();
-			logger.log(e.getMessage());
+
 		}
 
 	}
@@ -203,13 +218,14 @@ public class TorrentManager extends Thread {
 
 		@Override
 		public void run() {
-			
+
 			if (!peersInterestedInMe.isEmpty()) {
 				unchokedList.clear();
 				chokedList.clear();
 				int count = 0;
 
-				List<PeerConfig> peers = new ArrayList<PeerConfig>(peersInterestedInMe.values());
+				List<PeerConfig> peers = new ArrayList<PeerConfig>(
+						peersInterestedInMe.values());
 				Collections.sort(peers, new DownloadComparator<PeerConfig>());
 
 				String prefList = "";
@@ -235,12 +251,13 @@ public class TorrentManager extends Thread {
 					}
 					count++;
 				}
-				
-				if(!prefList.isEmpty()){
-					prefList.replaceFirst(",", "");
+
+				if (!prefList.isEmpty()) {
+					prefList = prefList.replaceFirst(",", "");
 				}
 
-				logger.log("Peer " + myPeerId + " has the preferred neighbors " + prefList);
+				logger.log("Peer " + myPeerId + " has the preferred neighbors "
+						+ prefList);
 			}
 		}
 	};
@@ -263,7 +280,10 @@ public class TorrentManager extends Thread {
 				}
 
 			}
-			logger.log("Peer " + myPeerId + " has the optimistically unchoked neighbor " + optimisticallyUnchokedPeer);
+			if (optimisticallyUnchokedPeer != -1)
+				logger.log("Peer " + myPeerId
+						+ " has the optimistically unchoked neighbor "
+						+ optimisticallyUnchokedPeer);
 
 		}
 	};
@@ -282,7 +302,8 @@ public class TorrentManager extends Thread {
 		@Override
 		public void run() {
 
-			if (openTCPconnections.size() == ConfigurationReader.getInstance().getPeerInfo().size()-1) {
+			if (openTCPconnections.size() == ConfigurationReader.getInstance()
+					.getPeerInfo().size() - 1) {
 
 				boolean shutDown = true;
 
